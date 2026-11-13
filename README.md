@@ -10,8 +10,6 @@ You can read the numbers with the built-in commands (`show`, `trend`, `diff`), w
 
 You can use it to track a program's performance across commits, or to record how long each CI step takes so you can make your development loop faster, with evidence.
 
-You need nothing but Git: no server, and no files in your working tree.
-
 [`docs/USAGE.md`](docs/USAGE.md) shows a full setup, and explains why the numbers live in Git notes and not in a file.
 
 ## Example
