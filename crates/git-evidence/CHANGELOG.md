@@ -4,6 +4,8 @@ All notable changes to `git-evidence` are recorded here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-14
+
 The first release, 0.1.0. `git-process` is released with it at the same version.
 
 ### Added

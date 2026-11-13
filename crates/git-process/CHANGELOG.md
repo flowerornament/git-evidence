@@ -4,7 +4,9 @@ All notable changes to `git-process` are recorded here. The format follows [Keep
 
 ## [Unreleased]
 
-The first version, to be released as 0.1.0, together with `git-evidence` at the same version: `git-evidence` re-exports its object ids, `IdError` and `Timestamp`, so the two are versioned and released together. 0.x because its API may still change between minors.
+## [0.1.0] - 2026-11-14
+
+The first version, released together with `git-evidence` at the same version: `git-evidence` re-exports its object ids, `IdError` and `Timestamp`, so the two are versioned and released together. 0.x because its API may still change between minors.
 
 ### Added
 
