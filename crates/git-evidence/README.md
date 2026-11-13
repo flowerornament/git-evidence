@@ -6,6 +6,8 @@ A producer (a benchmark, a test suite, a CI step) records what it measured on a 
 
 It needs nothing but Git: no server, no database to run, no files in the working tree.
 
+It is built for a trunk that many contributors land on, measured by producers that run elsewhere and later (a scheduled runner on a quiet machine, the CI gate, a candidate measured before landing): every run sits on the tree it measured, an unmeasured landing says why, and a candidate's numbers follow it when it lands. The repository's [docs/USAGE.md](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) walks through such a setup and explains why the numbers live in Git notes rather than in a file in the repository.
+
 ```text
 commits:                   C1 ───── C2 ───── C3 ───── C4 ──►      each with a tree
                            │T1      │T2      │T2      │T4         (C3 changed nothing: C2's tree)

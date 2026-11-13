@@ -23,7 +23,7 @@ Nothing else has an identity: no writer names, store ids or method hashes. Produ
 
 **A run is event lines** in the grammar `open · declare? · result* · close?`. Every line carries `v` (2), `run`, `seq` (0, 1, … without gaps) and `time` (`YYYY-MM-DDTHH:MM:SS.mmmZ`, the one form that sorts as text). `open` names the commit, producer, suite (harness, params, metrics) and environment; `declare` may add keys and metrics once, before any result (a later one leaves the run unreadable); each `result` answers one declared key; `close` ends `complete` (every declared key answered) or `refused{reason}` (every unanswered key refused), with free-JSON `conditions`. A producer opens before it works, so a crash leaves a visible open run, never a gap; an open run gives no values.
 
-**Why notes keyed by tree.** Evidence is about code, and a tree is the code. Keying by tree lets identical code share evidence across commits and survive a rebase that changes nothing; Git's fanout keeps an append the same cost at any size. Notes are not branches, so no checkout, bookmark or jj operation ever moves them.
+**Why notes keyed by tree.** ([`USAGE.md`](USAGE.md) has the longer case, including why not a file in the repository.) Evidence is about code, and a tree is the code. Keying by tree lets identical code share evidence across commits and survive a rebase that changes nothing; Git's fanout keeps an append the same cost at any size. Notes are not branches, so no checkout, bookmark or jj operation ever moves them.
 
 ## 2. Laws
 

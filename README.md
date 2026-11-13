@@ -4,6 +4,8 @@ Numbers recorded per Git commit, kept in Git notes.
 
 A benchmark, a test suite or a CI step records what it measured on a commit: a latency, a byte count, a pass or a fail, or why it could not measure. `git evidence` keeps those records in Git notes beside the code, keyed by the commit's tree, merges them between clones without conflicts, and prints them back as plain rows, or answers SQL over them. It needs nothing but Git: no server, no database to run, no files in the working tree.
 
+It is for a project where many contributors land on one trunk and the numbers that matter (benchmark times, check durations, pass or fail) come from producers that run elsewhere and later: a scheduled runner on a quiet machine, the CI gate, someone measuring a candidate before landing it. Without it, those numbers sit in CI logs and spreadsheets that nothing joins to the code, most landings are never measured, and "not measured" looks the same as "fine". With it, every run is recorded on the tree it measured, a landing that went unmeasured says why, a candidate's numbers follow it when it lands, and what counts as a regression is a query the project owns. [`docs/USAGE.md`](docs/USAGE.md) walks through such a setup, and explains why the numbers live in Git notes rather than a file in the repository.
+
 From the crate's [quick start](crates/git-evidence/README.md#quick-start), two runs of a benchmark on two commits:
 
 ```console
@@ -29,6 +31,7 @@ Both are released together, at one version.
 | Document                                                         | For                                                                                                                     |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | [`crates/git-evidence/README.md`](crates/git-evidence/README.md) | using the tool: quick start, every verb, column and setting                                                             |
+| [`docs/USAGE.md`](docs/USAGE.md) | the problem it solves, a project's setup end to end, and why it is shaped this way (and not a file in the repository) |
 | [`docs/FORMAT.md`](docs/FORMAT.md)                               | writing a producer or reader in another language: the event lines, the notes layout, the SQL views, and what may change |
 | [`docs/DESIGN.md`](docs/DESIGN.md)                               | why it is built this way: the laws, the write path, the index                                                           |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)                             | sending a change                                                                                                        |
