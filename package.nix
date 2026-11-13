@@ -1,4 +1,4 @@
-{ lib, rustPlatform, git, jujutsu, makeWrapper, pkg-config, sqlite }:
+{ lib, stdenv, rustPlatform, git, jujutsu, makeWrapper, pkg-config, sqlite }:
 let
   version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).workspace.package.version;
 in rustPlatform.buildRustPackage {
@@ -12,6 +12,12 @@ in rustPlatform.buildRustPackage {
   cargoBuildFlags = [ "--package" "git-evidence" ];
   # Both crates' tests, with the test-only features, as `just check` runs them.
   cargoTestFlags = [ "--workspace" "--all-features" ];
+  # That test runs the audit under launchd's PATH (/usr/bin:/bin) and needs
+  # uname there; the Linux build sandbox has no /usr/bin or /bin. `just check`
+  # runs it on Linux and macOS.
+  checkFlags = lib.optionals stdenv.hostPlatform.isLinux [
+    "--skip=the_audit_reads_this_machines_names_under_a_launchd_path"
+  ];
   # nixpkgs' cargo hook links libsqlite3-sys against the system SQLite
   # (LIBSQLITE3_SYS_USE_PKG_CONFIG=1) in place of rusqlite's bundled copy.
   nativeBuildInputs = [ makeWrapper pkg-config ];
