@@ -4,7 +4,17 @@ Numbers recorded per Git commit, kept in Git notes.
 
 A benchmark, a test suite or a CI step records what it measured on a commit: a latency, a byte count, a pass or a fail, or why it could not measure. `git evidence` keeps those records in Git notes beside the code, keyed by the commit's tree, merges them between clones without conflicts, and prints them back as plain rows, or answers SQL over them. It needs nothing but Git: no server, no database to run, no files in the working tree.
 
-It is for a project where many contributors land on one trunk and the numbers that matter (benchmark times, check durations, pass or fail) come from producers that run elsewhere and later: a scheduled runner on a quiet machine, the CI gate, someone measuring a candidate before landing it. Without it, those numbers sit in CI logs and spreadsheets that nothing joins to the code, most landings are never measured, and "not measured" looks the same as "fine". With it, every run is recorded on the tree it measured, a landing that went unmeasured says why, a candidate's numbers follow it when it lands, and what counts as a regression is a query the project owns. [`docs/USAGE.md`](docs/USAGE.md) walks through such a setup, and explains why the numbers live in Git notes rather than a file in the repository.
+## Who it is for
+
+Projects where many people merge into one main branch, and where the numbers that matter come from somewhere other than the person who made the commit. Benchmark times from a nightly job on a quiet machine. Test durations from CI. A teammate measuring a change before merging it.
+
+Without a shared place to keep them, those numbers end up in CI logs and spreadsheets. Nobody can easily ask what a benchmark did over the last month. Most commits are never measured, and a commit nobody measured looks the same as one that was measured and came out fine.
+
+git-evidence keeps every measurement with the code it measured. A commit that could not be measured can record why. Numbers taken on a change before it merges still count after it, if the merged result is exactly the code that was measured. What counts as a regression is up to you: it is a SQL query or a script over the numbers, kept in your project.
+
+[`docs/USAGE.md`](docs/USAGE.md) walks through a full setup, and explains why the numbers live in Git notes instead of a file in the repository.
+
+## Example
 
 From the crate's [quick start](crates/git-evidence/README.md#quick-start), two runs of a benchmark on two commits:
 
