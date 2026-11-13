@@ -1,0 +1,71 @@
+[workspace]
+members = ["crates/git-evidence", "crates/git-process"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/flowerornament/git-evidence"
+
+[workspace.dependencies]
+serde = { version = "1.0.228", features = ["derive", "rc"] }
+serde_json = { version = "1.0.149", features = ["float_roundtrip"] }
+thiserror = "2.0.18"
+git-process = { version = "0.1.0", path = "crates/git-process" }
+
+[workspace.lints.rust]
+# Deny unsafe without documented invariants
+unsafe_code = "deny"
+# Catch common mistakes
+unused_must_use = "deny"
+elided_lifetimes_in_paths = "warn"
+
+[workspace.lints.clippy]
+# Deny all default + pedantic warnings. Pedantic catches cast bugs,
+# float comparison, match duplication.
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+
+# Restriction lints — opt-in for safety and hygiene
+undocumented_unsafe_blocks = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+unwrap_used = "deny"
+todo = "deny"
+unimplemented = "deny"
+panic_in_result_fn = "deny"
+mem_forget = "deny"
+clone_on_ref_ptr = "deny"
+rc_mutex = "deny"
+lossy_float_literal = "deny"
+float_cmp_const = "deny"
+large_stack_arrays = "deny"
+mutex_atomic = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+allow_attributes_without_reason = "deny"
+
+# Nursery lints — opt-in for hygiene
+use_self = "warn"
+
+# Pedantic allows — noisy or inapplicable
+module_name_repetitions = "allow"
+# Rust 1.99: suggests assert_eq!(x, [] as [T; 0]) for assert!(x.is_empty()), which reads worse.
+assert_is_empty = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+missing_fields_in_debug = "allow"
+doc_markdown = "allow"
+too_many_lines = "allow"
+similar_names = "allow"
+trivially_copy_pass_by_ref = "allow"
+inline_always = "allow"
+if_not_else = "allow"
+cast_possible_wrap = "allow"
+items_after_statements = "allow"
+struct_excessive_bools = "allow"
+unreadable_literal = "allow"

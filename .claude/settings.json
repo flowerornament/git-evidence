@@ -1,0 +1,22 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR/scripts/jj-identity\" claude-code" }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "bd prime --hook-json" }]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "bd prime --hook-json" }]
+      }
+    ]
+  }
+}

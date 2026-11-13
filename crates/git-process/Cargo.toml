@@ -1,0 +1,32 @@
+[package]
+name = "git-process"
+description = "A hardened `git` subprocess: one invocation prefix, typed object ids, retried starts and their failure records"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+keywords = ["git", "subprocess", "process"]
+categories = ["development-tools"]
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, optional = true }
+tempfile = { version = "3.27.0", optional = true }
+thiserror.workspace = true
+
+[features]
+# `testing::repo`: a throwaway repository with one commit, for tests of Git readers.
+testing = ["dep:tempfile", "dep:serde_json"]
+
+[[test]]
+name = "start_observer"
+required-features = ["testing"]
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile = "3.27.0"

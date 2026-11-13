@@ -1,0 +1,67 @@
+# The public SQL views, one section per schema version: appended, never
+# edited. Checked by tests/contract.rs.
+
+## schema 1
+about: schema_version INT, views_version INT, trunk_ref TEXT, trunk TEXT, public_views TEXT, pending_views TEXT
+landings: pos INTEGER, commit_id TEXT, tree TEXT, date TEXT, subject TEXT
+runs: run TEXT, kind TEXT, producer TEXT, machine TEXT, variant TEXT, conditions TEXT, disturbed TEXT, landing INT, tree TEXT, commit_id TEXT, opened TEXT, ended TEXT, state TEXT, reason TEXT, complete INT
+params: run TEXT, name TEXT, value TEXT
+measures: run TEXT, key TEXT, metric TEXT, value REAL, unit TEXT, direction TEXT, n INTEGER, mad REAL, origin TEXT, contradicted INT
+verdicts: run TEXT, key TEXT, status TEXT, duration_ms REAL, cpu_ms REAL, tries INTEGER, contradicted INT
+outcomes: run TEXT, key TEXT, outcome TEXT, status TEXT, reason TEXT, detail TEXT, location TEXT, contradicted INT
+facts: landing INTEGER, file TEXT, pointer TEXT, before TEXT, after TEXT, check_key TEXT, checked TEXT
+
+## schema 2
+about: schema_version INT, views_version INT, trunk_ref TEXT, trunk TEXT, public_views TEXT, pending_views TEXT
+landings: pos INTEGER, commit_id TEXT, tree TEXT, date TEXT, subject TEXT
+runs: run TEXT, kind TEXT, producer TEXT, machine TEXT, variant TEXT, conditions TEXT, disturbed TEXT, landing INT, tree TEXT, commit_id TEXT, opened TEXT, ended TEXT, state TEXT, reason TEXT, complete INT
+params: run TEXT, name TEXT, value TEXT
+measures: run TEXT, key TEXT, metric TEXT, value REAL, unit TEXT, direction TEXT, n INTEGER, mad REAL, origin TEXT, contradicted INT
+verdicts: run TEXT, key TEXT, status TEXT, duration_ms REAL, cpu_ms REAL, tries INTEGER, contradicted INT
+outcomes: run TEXT, key TEXT, outcome TEXT, status TEXT, reason TEXT, detail TEXT, location TEXT, contradicted INT
+facts: landing INTEGER, file TEXT, pointer TEXT, before TEXT, after TEXT, check_key TEXT, checked TEXT
+bounds: landing INTEGER, bound TEXT, kind TEXT, machine TEXT, verdict TEXT, why TEXT, run TEXT, other_runs INTEGER, runs_disagree INTEGER, aggregate TEXT, bounded TEXT, limit_value REAL, undeclared TEXT, geomean REAL
+bound_keys: landing INTEGER, bound TEXT, key TEXT, state TEXT, value REAL, outside INTEGER, why TEXT
+
+## schema 3
+about: schema_version INT, views_version INT, trunk_ref TEXT, trunk TEXT, public_views TEXT, pending_views TEXT, derived TEXT
+landings: pos INTEGER, commit_id TEXT, tree TEXT, date TEXT, subject TEXT
+runs: run TEXT, kind TEXT, producer TEXT, machine TEXT, variant TEXT, conditions TEXT, disturbed TEXT, landing INT, tree TEXT, commit_id TEXT, opened TEXT, ended TEXT, state TEXT, reason TEXT, complete INT
+params: run TEXT, name TEXT, value TEXT
+measures: run TEXT, key TEXT, metric TEXT, value REAL, unit TEXT, direction TEXT, n INTEGER, mad REAL, origin TEXT, contradicted INT
+verdicts: run TEXT, key TEXT, status TEXT, duration_ms REAL, cpu_ms REAL, tries INTEGER, contradicted INT
+outcomes: run TEXT, key TEXT, outcome TEXT, status TEXT, reason TEXT, detail TEXT, location TEXT, contradicted INT
+facts: landing INTEGER, file TEXT, pointer TEXT, before TEXT, after TEXT, check_key TEXT, checked TEXT
+bounds: landing INTEGER, bound TEXT, kind TEXT, machine TEXT, verdict TEXT, why TEXT, run TEXT, other_runs INTEGER, runs_disagree INTEGER, aggregate TEXT, bounded TEXT, limit_value REAL, undeclared TEXT, geomean REAL
+bound_keys: landing INTEGER, bound TEXT, key TEXT, state TEXT, value REAL, outside INTEGER, why TEXT
+
+## schema 4
+about: schema_version INT, views_version INT, trunk_ref TEXT, trunk TEXT, public_views TEXT, pending_views TEXT, derived TEXT
+landings: landing INTEGER, commit_id TEXT, tree TEXT, date TEXT, subject TEXT
+runs: run TEXT, kind TEXT, producer TEXT, machine TEXT, variant TEXT, conditions TEXT, disturbed TEXT, landing INT, tree TEXT, commit_id TEXT, opened TEXT, closed TEXT, ended TEXT, reason TEXT, complete INT
+params: run TEXT, name TEXT, value TEXT
+measures: run TEXT, key TEXT, metric TEXT, value REAL, unit TEXT, direction TEXT, n INTEGER, mad REAL, origin TEXT, contradicted INT
+verdicts: run TEXT, key TEXT, status TEXT, duration_ms REAL, cpu_ms REAL, tries INTEGER, contradicted INT
+outcomes: run TEXT, key TEXT, outcome TEXT, status TEXT, reason TEXT, detail TEXT, location TEXT, contradicted INT
+facts: landing INTEGER, file TEXT, pointer TEXT, before TEXT, after TEXT, check_key TEXT, checked TEXT
+bounds: landing INTEGER, bound TEXT, kind TEXT, machine TEXT, verdict TEXT, why TEXT, run TEXT, other_runs INTEGER, runs_disagree INTEGER, aggregate TEXT, side TEXT, limit_value REAL, limit_undeclared TEXT, geomean REAL
+bound_keys: landing INTEGER, bound TEXT, key TEXT, state TEXT, value REAL, outside INTEGER, why TEXT
+
+## schema 5
+about: schema_version INT, views_version INT, trunk_ref TEXT, trunk TEXT, public_views TEXT, pending_views TEXT
+landings: landing INTEGER, commit_id TEXT, tree TEXT, date TEXT, subject TEXT
+runs: run TEXT, kind TEXT, producer TEXT, machine TEXT, variant TEXT, conditions TEXT, disturbed TEXT, landing INT, tree TEXT, commit_id TEXT, opened TEXT, closed TEXT, ended TEXT, reason TEXT
+params: run TEXT, name TEXT, value TEXT
+measures: run TEXT, key TEXT, metric TEXT, value REAL, unit TEXT, direction TEXT, n INTEGER, mad REAL, origin TEXT
+verdicts: run TEXT, key TEXT, status TEXT, duration_ms REAL, cpu_ms REAL, tries INTEGER
+outcomes: run TEXT, key TEXT, outcome TEXT, status TEXT, reason TEXT, detail TEXT, location TEXT
+
+## schema 6
+about: schema_version INT, views_version INT, trunk_ref TEXT, trunk TEXT, public_views TEXT, pending_views TEXT
+landings: landing INTEGER, commit_id TEXT, tree TEXT, date TEXT, subject TEXT
+runs: run TEXT, kind TEXT, producer TEXT, machine TEXT, variant TEXT, conditions TEXT, disturbed TEXT, landing INT, tree TEXT, commit_id TEXT, opened TEXT, closed TEXT, ended TEXT, reason TEXT
+params: run TEXT, name TEXT, value TEXT
+conditions: run TEXT, path TEXT, value TEXT
+measures: run TEXT, key TEXT, metric TEXT, value REAL, unit TEXT, direction TEXT, n INTEGER, mad REAL, origin TEXT
+verdicts: run TEXT, key TEXT, status TEXT, duration_ms REAL, cpu_ms REAL, tries INTEGER
+outcomes: run TEXT, key TEXT, outcome TEXT, status TEXT, reason TEXT, detail TEXT, location TEXT

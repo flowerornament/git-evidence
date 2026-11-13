@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # The same gate as a local `just check`, in the flake's dev shell: rustfmt,
+  # strict Clippy, every test and doc test with the test-only features, the
+  # API docs, and both crates packaged and built from their packages.
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          extra_nix_config: experimental-features = nix-command flakes
+
+      - name: Check gate
+        run: nix develop -c just check
+
+  # The oldest Rust the crates declare (`rust-version` in Cargo.toml) still
+  # builds them, tests included.
+  msrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Check with the declared rust-version
+        run: |
+          msrv="$(sed -n 's/^rust-version = "\(.*\)"$/\1/p' Cargo.toml)"
+          rustup toolchain install "$msrv" --profile minimal
+          cargo "+$msrv" check --workspace --all-targets --all-features --locked
+
+  # The Nix package builds, runs both crates' tests, and installs a binary
+  # whose version and manual pages are checked.
+  nix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          extra_nix_config: experimental-features = nix-command flakes
+
+      - name: Flake package smoke test
+        run: |
+          out="$(nix build --no-link --print-out-paths -L .)"
+          "$out/bin/git-evidence" --version
+          test -s "$out/share/man/man1/git-evidence.1.gz"
+          nix run . -- --version

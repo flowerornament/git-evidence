@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+# One release at a time; a second tag waits rather than racing the first.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  # docs/RELEASE.md is the procedure. The tagged commit must be on main;
+  # `release.sh verify` checks that the tag names the workspace version and
+  # both crates, that both changelogs have a dated, filled section, runs the
+  # gate and a publish dry run; git-process is published before git-evidence,
+  # which depends on it; the GitHub release comes last, so a failed publish
+  # leaves no release.
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@630ae543ea3a38a9a4166f03376c02c50f408342 # v31.11.0
+        with:
+          extra_nix_config: experimental-features = nix-command flakes
+
+      - name: Check the tagged commit is on main
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Render release notes
+        run: scripts/release.sh notes "${GITHUB_REF_NAME#v}" > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Verify the release
+        run: nix develop -c scripts/release.sh verify "${GITHUB_REF_NAME#v}"
+
+      - name: Publish git-process
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: nix develop -c cargo publish --locked --package git-process
+
+      - name: Publish git-evidence
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: nix develop -c cargo publish --locked --package git-evidence
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md"

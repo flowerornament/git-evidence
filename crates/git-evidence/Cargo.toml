@@ -1,0 +1,49 @@
+[package]
+name = "git-evidence"
+description = "Numbers recorded per Git commit, kept in Git notes; show, trend, diff and SQL"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+readme = "README.md"
+documentation = "https://docs.rs/git-evidence"
+keywords = ["git", "git-notes", "benchmark", "metrics", "performance"]
+categories = ["development-tools", "development-tools::testing", "command-line-utilities"]
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "git-evidence"
+path = "src/main.rs"
+required-features = ["bench"]
+
+[dependencies]
+clap = { version = "4.6.0", features = ["derive"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2 = "0.11.0"
+thiserror.workspace = true
+tempfile = "3.27.0"
+git-process.workspace = true
+clap_mangen = "0.3.3"
+roff = "1.1.1"
+
+[features]
+# The command line's `bench` verb and its types; the binary needs it.
+default = ["bench"]
+bench = []
+# Aborts at named write points for the crash-row tests; never enabled in builds.
+fault-injection = []
+# `testing::Scratch`: a throwaway repository for an integration's tests.
+testing = ["git-process/testing"]
+
+[dev-dependencies]
+git-evidence = { path = ".", features = ["fault-injection", "testing"] }
+git-process = { workspace = true, features = ["testing"] }
+tempfile = "3.27.0"
+
+[build-dependencies]
+sha2 = "0.11.0"
