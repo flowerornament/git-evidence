@@ -1,12 +1,18 @@
 # git-evidence
 
-Numbers recorded per Git commit, kept in Git notes.
+git-evidence stores numbers, like performance measurements, per Git commit.
 
-A producer (a benchmark, a test suite, a CI step) records what it measured on a commit: a latency, a byte count, a pass or a fail, or why it could not measure. `git-evidence` keeps those records in Git notes beside the code, keyed by the commit's tree, merges them between clones without conflicts, and prints them back as plain rows: aligned columns at a terminal, CSV with `--csv`. It judges nothing. Whether a number got worse is for you to decide, with `sort`, `awk`, a script or an SQL query over the rows.
+A benchmark, a test suite or a CI step records what it measured on a commit: a time, a size, a pass or a fail. If it could not measure, it records why, so a missing number never looks like a good one.
 
-It needs nothing but Git: no server, no database server, no files in the working tree.
+The records live in Git notes inside the repository. `git evidence fetch` and `push` move them between clones, and the records merge without conflicts. They are filed under the commit's tree, so numbers measured on a branch still apply when that exact code lands.
 
-Use it to track a program's performance across commits, or how long each CI step takes, so you can make your development loop faster, with evidence. [docs/USAGE.md](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) shows a full setup.
+To answer questions, git-evidence builds a SQLite database from the notes. You, a script or a coding agent can query it with SQL, or use the built-in commands (`trend`, `diff`, `show`) that print plain rows. It judges nothing: whether a number got worse is for you to decide.
+
+Use it to track a program's performance across commits. Or record how long each CI step takes, so you can make your development loop faster, with evidence.
+
+It needs nothing but Git: no server, no files in the working tree.
+
+[docs/USAGE.md](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) in the repository shows a full setup, and explains why the numbers live in Git notes and not in a file.
 
 ```text
 commits:                   C1 ───── C2 ───── C3 ───── C4 ──►      each with a tree
