@@ -1,16 +1,16 @@
 # git-evidence
 
-git-evidence stores numbers, like performance measurements, per Git commit.
+git-evidence lets you store numbers, like performance measurements, on any Git commit.
 
-A benchmark, a test suite or a CI step records what it measured on a commit: a time, a size, a pass or a fail. If it could not measure, it records why, so a missing number never looks like a good one.
+You record what a benchmark, a test suite or a CI step measured on a commit: a time, a size, a pass or a fail. When one of them could not measure, you record why, so a missing number never looks like a good one.
 
-The records live in Git notes inside the repository. `git evidence fetch` and `push` move them between clones, and the records merge without conflicts. They are filed under the commit's tree, so numbers measured on a branch still apply when that exact code lands.
+Your records are kept in Git notes inside the repository. You share them with `git evidence push` and pick up other people's with `git evidence fetch`, and records from different clones merge without conflicts. Because records are filed under the commit's tree, numbers you measure on a branch still apply when that exact code lands.
 
-To answer questions, git-evidence builds a SQLite database from the notes. You, a script or a coding agent can query it with SQL, or use the built-in commands (`trend`, `diff`, `show`) that print plain rows. It judges nothing: whether a number got worse is for you to decide.
+You can read the numbers with the built-in commands (`show`, `trend`, `diff`), which print plain rows. For anything else, git-evidence builds a SQLite database from the notes, and you, a script or a coding agent can query it with SQL. It never judges the numbers: you decide whether one got worse.
 
-Use it to track a program's performance across commits. Or record how long each CI step takes, so you can make your development loop faster, with evidence.
+You can use it to track a program's performance across commits, or to record how long each CI step takes so you can make your development loop faster, with evidence.
 
-It needs nothing but Git: no server, no files in the working tree.
+You need nothing but Git: no server, and no files in your working tree.
 
 [docs/USAGE.md](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) in the repository shows a full setup, and explains why the numbers live in Git notes and not in a file.
 
