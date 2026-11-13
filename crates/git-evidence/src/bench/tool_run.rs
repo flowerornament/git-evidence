@@ -113,7 +113,7 @@ impl BenchReport {
                 }
             }
             let outcome = match failed {
-                Some(why) => Outcome::Refused(Reason::new("answer_failed", Some(&why))),
+                Some(why) => Outcome::Refused(Reason::new("answer_failed").detail(why)),
                 None => Outcome::Measured(measures),
             };
             outcomes.push((Key::parse(verb.name())?, outcome));

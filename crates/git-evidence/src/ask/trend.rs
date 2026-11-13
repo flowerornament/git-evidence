@@ -14,6 +14,7 @@ use std::num::NonZeroU32;
 
 /// One run's value of the metric on one landing.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct Point {
     pub landing: LandingNumber,
     pub commit: CommitId,
@@ -29,6 +30,7 @@ pub struct Point {
 
 /// What `trend` asks.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct TrendQuery {
     pub metric: MetricName,
     pub key: Key,
@@ -51,6 +53,20 @@ impl TrendQuery {
             machine: None,
             landings: Selector::newest(Self::DEFAULT_LAST),
         }
+    }
+
+    /// Only the runs on `machine`.
+    #[must_use]
+    pub fn machine(mut self, machine: Machine) -> Self {
+        self.machine = Some(machine);
+        self
+    }
+
+    /// Over the landings `landings` selects.
+    #[must_use]
+    pub fn landings(mut self, landings: Selector) -> Self {
+        self.landings = landings;
+        self
     }
 }
 

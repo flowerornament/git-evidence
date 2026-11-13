@@ -13,6 +13,7 @@ use serde::Serialize;
 
 /// One key with evidence, and its metrics.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct KeyInfo {
     pub kind: Kind,
     pub key: String,
@@ -26,6 +27,7 @@ pub struct KeyInfo {
 /// none) appears once per declaration: each is what some run recorded, and
 /// none is chosen for the reader.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct RecordedMetric {
     /// The metric's name, as recorded.
     pub name: String,
@@ -38,10 +40,33 @@ pub struct RecordedMetric {
 /// What `keys` asks: every key with evidence, or only those of one kind, or
 /// only metrics matching a glob.
 #[derive(Debug, Clone, Default)]
+#[non_exhaustive]
 pub struct KeysQuery {
     pub kind: Option<Kind>,
     /// A glob over metric names (`block.*`).
     pub metric: Option<String>,
+}
+
+impl KeysQuery {
+    /// Every key and metric with evidence; narrow it with [`Self::kind`] and [`Self::metric`].
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Only the keys of `kind`.
+    #[must_use]
+    pub fn kind(mut self, kind: Kind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
+    /// Only the metrics matching the glob `metric`.
+    #[must_use]
+    pub fn metric(mut self, metric: impl Into<String>) -> Self {
+        self.metric = Some(metric.into());
+        self
+    }
 }
 
 /// `git evidence keys`: the keys and metrics that have evidence.

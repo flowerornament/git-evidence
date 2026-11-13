@@ -26,6 +26,7 @@ pub const DERIVED_PREFIX: &str = "verdict.";
 
 /// The tool that produced the values.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Producer {
     pub name: ProducerName,
     /// Absent when the source did not record it.
@@ -33,8 +34,27 @@ pub struct Producer {
     pub version: Option<String>,
 }
 
+impl Producer {
+    /// A producer named `name`, its version unrecorded.
+    #[must_use]
+    pub const fn new(name: ProducerName) -> Self {
+        Self {
+            name,
+            version: None,
+        }
+    }
+
+    /// The producer with its version.
+    #[must_use]
+    pub fn version(mut self, version: impl Into<String>) -> Self {
+        self.version = Some(version.into());
+        self
+    }
+}
+
 /// What is being asked: the harness and its operative parameters.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Suite {
     /// The harness-semantics version: bumped when a change alters what values mean.
     #[serde(default)]
@@ -49,6 +69,7 @@ pub struct Suite {
 /// What a metric's numbers mean: its unit and which way is better. Part of a
 /// value's meaning, so two values are compared only when these agree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Metric {
     /// A UCUM unit: `ns`, `us`, `By`, `1`, `{count}`.
     pub unit: String,
@@ -58,8 +79,32 @@ pub struct Metric {
     pub better: Option<Direction>,
 }
 
+impl Metric {
+    /// A metric in `unit`, better in the direction given, or in neither.
+    #[must_use]
+    pub fn new(unit: impl Into<String>, better: Option<Direction>) -> Self {
+        Self {
+            unit: unit.into(),
+            better,
+        }
+    }
+
+    /// A metric in `unit` where lower is better: a time, a size.
+    #[must_use]
+    pub fn lower(unit: impl Into<String>) -> Self {
+        Self::new(unit, Some(Direction::Lower))
+    }
+
+    /// A metric in `unit` where higher is better: a throughput.
+    #[must_use]
+    pub fn higher(unit: impl Into<String>) -> Self {
+        Self::new(unit, Some(Direction::Higher))
+    }
+}
+
 /// Where a run executed.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Environment {
     /// The machine's declared name: `bench`, `laptop`. Part of the variant.
     #[serde(default)]
@@ -75,6 +120,7 @@ pub struct Environment {
 /// The build a run executed: its profile is part of the question, the rest is
 /// what a comparison measures.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Build {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub profile: Option<Profile>,
@@ -87,6 +133,7 @@ pub struct Build {
 
 /// Target and flags: a debug and a release build answer different questions.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Profile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
@@ -96,6 +143,7 @@ pub struct Profile {
 
 /// The payload of `open`, written before any work.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Open {
     /// The commit measured; its tree is the note's key.
     pub commit: CommitId,
@@ -163,6 +211,7 @@ pub enum Direction {
 /// One summarised metric of a measured key; its unit and direction are the
 /// run's declaration of the metric.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Measure {
     pub metric: MetricName,
     pub value: f64,
@@ -189,6 +238,21 @@ impl Measure {
             n: None,
             mad: None,
         })
+    }
+
+    /// The value with how many samples it summarises.
+    #[must_use]
+    pub const fn n(mut self, n: u32) -> Self {
+        self.n = Some(n);
+        self
+    }
+
+    /// The value with its spread: the median absolute deviation, unscaled,
+    /// in the metric's unit. `record` refuses one that is not finite.
+    #[must_use]
+    pub const fn mad(mut self, mad: f64) -> Self {
+        self.mad = Some(mad);
+        self
     }
 }
 
@@ -218,6 +282,7 @@ impl VerdictStatus {
 
 /// One try at a verdict.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Try {
     pub status: VerdictStatus,
     /// Wall time of the try, in milliseconds; absent when not recorded.
@@ -237,6 +302,30 @@ pub struct Try {
 pub(crate) type TimeOf = fn(&Try) -> Option<f64>;
 
 impl Try {
+    /// A try that ended with `status`, its times unrecorded.
+    #[must_use]
+    pub const fn new(status: VerdictStatus) -> Self {
+        Self {
+            status,
+            duration_ms: None,
+            cpu_ms: None,
+        }
+    }
+
+    /// The try with its wall time, in milliseconds.
+    #[must_use]
+    pub const fn duration_ms(mut self, ms: f64) -> Self {
+        self.duration_ms = Some(ms);
+        self
+    }
+
+    /// The try with its CPU time, in milliseconds.
+    #[must_use]
+    pub const fn cpu_ms(mut self, ms: f64) -> Self {
+        self.cpu_ms = Some(ms);
+        self
+    }
+
     /// The times a try may carry, by field name: the index sums each across a
     /// verdict's tries into the derived metric `verdict.<status>.<name>`.
     pub(crate) const TIMES: [(&'static str, TimeOf); 2] =
@@ -245,14 +334,24 @@ impl Try {
 
 /// A pass/fail outcome with its tries.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Verdict {
     pub status: VerdictStatus,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub tries: Vec<Try>,
 }
 
+impl Verdict {
+    /// A verdict of `status` reached through `tries` (none when they were not recorded).
+    #[must_use]
+    pub const fn new(status: VerdictStatus, tries: Vec<Try>) -> Self {
+        Self { status, tries }
+    }
+}
+
 /// Why a key has no value: a reason code and what was observed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct Reason {
     pub reason: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -260,12 +359,20 @@ pub struct Reason {
 }
 
 impl Reason {
+    /// The reason code `reason`: `timeout`, `build_failed`, `interrupted`.
     #[must_use]
-    pub fn new(reason: &str, detail: Option<&str>) -> Self {
+    pub fn new(reason: impl Into<String>) -> Self {
         Self {
-            reason: reason.to_owned(),
-            detail: detail.map(str::to_owned),
+            reason: reason.into(),
+            detail: None,
         }
+    }
+
+    /// The reason with what was observed.
+    #[must_use]
+    pub fn detail(mut self, detail: impl Into<String>) -> Self {
+        self.detail = Some(detail.into());
+        self
     }
 }
 
@@ -281,6 +388,28 @@ pub enum Outcome {
     Skipped(Reason),
 }
 
+impl Outcome {
+    /// One measured value of a declared metric.
+    ///
+    /// # Errors
+    /// [`NotFinite`] for NaN or an infinity.
+    pub fn measured(metric: MetricName, value: f64) -> Result<Self, NotFinite> {
+        Ok(Self::Measured(vec![Measure::new(metric, value)?]))
+    }
+
+    /// A check that passed, its tries unrecorded.
+    #[must_use]
+    pub const fn pass() -> Self {
+        Self::Verdict(Verdict::new(VerdictStatus::Pass, Vec::new()))
+    }
+
+    /// A check that failed, its tries unrecorded.
+    #[must_use]
+    pub const fn fail() -> Self {
+        Self::Verdict(Verdict::new(VerdictStatus::Fail, Vec::new()))
+    }
+}
+
 /// How a run ended.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -291,12 +420,67 @@ pub enum End {
     Refused(Reason),
 }
 
+/// The payload of `declare`: what a producer learns once the work has begun.
+/// A run has at most one, before any result.
+#[derive(Debug, Clone, Default, PartialEq)]
+#[non_exhaustive]
+pub struct Declaration {
+    /// The keys, when `open` did not name them.
+    pub keys: Option<Vec<Key>>,
+    /// Metrics learned late; they extend the run's declarations, never redefine one.
+    pub metrics: BTreeMap<MetricName, Metric>,
+    /// What was built, when it is known only now.
+    pub build: Option<Build>,
+}
+
+impl Declaration {
+    /// A declaration of the run's keys.
+    #[must_use]
+    pub fn keys(keys: impl IntoIterator<Item = Key>) -> Self {
+        Self {
+            keys: Some(keys.into_iter().collect()),
+            ..Self::default()
+        }
+    }
+
+    /// The declaration with one more metric.
+    #[must_use]
+    pub fn metric(mut self, name: MetricName, metric: Metric) -> Self {
+        self.metrics.insert(name, metric);
+        self
+    }
+
+    /// The declaration with what was built.
+    #[must_use]
+    pub fn build(mut self, build: Build) -> Self {
+        self.build = Some(build);
+        self
+    }
+}
+
+impl From<Declaration> for Event {
+    fn from(declaration: Declaration) -> Self {
+        let Declaration {
+            keys,
+            metrics,
+            build,
+        } = declaration;
+        Self::Declare {
+            keys,
+            metrics,
+            build,
+        }
+    }
+}
+
 /// The events of the run grammar.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum Event {
     Open(Box<Open>),
     /// The keys, the metrics and what was built, once the producer knows them.
+    /// Built from a [`Declaration`].
+    #[non_exhaustive]
     Declare {
         /// Absent when `open` already named the keys.
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -307,6 +491,8 @@ pub enum Event {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         build: Option<Build>,
     },
+    /// Built by [`Event::result`].
+    #[non_exhaustive]
     Result {
         key: Key,
         outcome: Outcome,
@@ -314,6 +500,8 @@ pub enum Event {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         location: Option<String>,
     },
+    /// Built by [`Event::close`].
+    #[non_exhaustive]
     Close {
         end: End,
         /// Readings taken while the run executed (load): provenance only.
@@ -322,8 +510,49 @@ pub enum Event {
     },
 }
 
+impl Event {
+    /// A result: `key`'s `outcome`.
+    #[must_use]
+    pub const fn result(key: Key, outcome: Outcome) -> Self {
+        Self::Result {
+            key,
+            outcome,
+            location: None,
+        }
+    }
+
+    /// A result with the code site that produced it.
+    #[must_use]
+    pub fn result_at(key: Key, outcome: Outcome, location: impl Into<String>) -> Self {
+        Self::Result {
+            key,
+            outcome,
+            location: Some(location.into()),
+        }
+    }
+
+    /// The run's close.
+    #[must_use]
+    pub const fn close(end: End) -> Self {
+        Self::Close {
+            end,
+            conditions: None,
+        }
+    }
+
+    /// The run's close with the readings taken while it executed, a JSON object.
+    #[must_use]
+    pub const fn close_with(end: End, conditions: serde_json::Value) -> Self {
+        Self::Close {
+            end,
+            conditions: Some(conditions),
+        }
+    }
+}
+
 /// One line of a note.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[non_exhaustive]
 pub struct EventLine {
     pub v: u32,
     pub run: RunId,
@@ -336,6 +565,20 @@ pub struct EventLine {
     pub time: String,
     #[serde(flatten)]
     pub event: Event,
+}
+
+impl EventLine {
+    /// The line at `seq` of `run`, written at `time`, in this crate's envelope version.
+    #[must_use]
+    pub fn new(run: RunId, seq: u32, time: Timestamp, event: Event) -> Self {
+        Self {
+            v: ENVELOPE_VERSION,
+            run,
+            seq,
+            time: time.into(),
+            event,
+        }
+    }
 }
 
 /// Sorted-key compact JSON, for the digests the index derives.
@@ -398,7 +641,7 @@ mod tests {
             time: "2026-10-08T03:10:02.123Z".into(),
             event: Event::Result {
                 key: Key::parse("swap_quality").expect("key"),
-                outcome: Outcome::Refused(Reason::new("noisy_host", None)),
+                outcome: Outcome::Refused(Reason::new("noisy_host")),
                 location: None,
             },
         };

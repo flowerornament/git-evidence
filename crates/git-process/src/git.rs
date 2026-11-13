@@ -12,6 +12,7 @@ use std::process::{Command, Stdio};
 
 /// A failed Git invocation.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum GitError {
     /// `git` never started: refused at once when missing or forbidden, else
     /// after a few tries spaced out.

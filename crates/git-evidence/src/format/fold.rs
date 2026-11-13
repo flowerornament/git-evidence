@@ -92,6 +92,7 @@ impl RunState {
 
 /// A line or run that broke the grammar or could not be read.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Violation {
     pub run: Option<RunId>,
     pub problem: Problem,
@@ -484,9 +485,7 @@ fn merge_build(into: &mut Build, from: Build) {
 pub(crate) mod tests {
     use super::*;
     use crate::format::event::Reason;
-    use crate::format::event::{
-        Direction, ENVELOPE_VERSION, Environment, Measure, Metric, Producer, Suite,
-    };
+    use crate::format::event::{ENVELOPE_VERSION, Environment, Measure, Metric, Producer, Suite};
     use crate::format::id::{CommitId, MetricName, ProducerName};
 
     pub(crate) const RUN: &str = "01JA8Z3K4M0000000000000000";
@@ -529,10 +528,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn ns() -> Metric {
-        Metric {
-            unit: "ns".into(),
-            better: Some(Direction::Lower),
-        }
+        Metric::lower("ns")
     }
 
     pub(crate) fn measured() -> Outcome {
@@ -664,7 +660,7 @@ pub(crate) mod tests {
             line(
                 2,
                 Event::Close {
-                    end: End::Refused(Reason::new("interrupted", None)),
+                    end: End::Refused(Reason::new("interrupted")),
                     conditions: None,
                 },
             ),
@@ -682,7 +678,7 @@ pub(crate) mod tests {
         assert_eq!(run.outcome(&key("a")), Some(measured()));
         assert_eq!(
             run.outcome(&key("b")),
-            Some(Outcome::Refused(Reason::new("interrupted", None))),
+            Some(Outcome::Refused(Reason::new("interrupted"))),
             "an ended run assigns every declared key"
         );
     }
@@ -792,7 +788,7 @@ pub(crate) mod tests {
             line(
                 2,
                 Event::Close {
-                    end: End::Refused(Reason::new("interrupted", None)),
+                    end: End::Refused(Reason::new("interrupted")),
                     conditions: None,
                 },
             ),
@@ -856,7 +852,7 @@ pub(crate) mod tests {
         let folded = fold(&note(&[
             line(0, open(Some(&["a"]))),
             result(1, "a", measured()),
-            result(1, "a", Outcome::Refused(Reason::new("noisy_host", None))),
+            result(1, "a", Outcome::Refused(Reason::new("noisy_host"))),
         ]));
         assert!(folded.runs.is_empty());
         assert_eq!(

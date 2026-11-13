@@ -22,6 +22,7 @@ use std::str::FromStr;
 /// then the date window, then the newest `last` of what remains. Nothing set
 /// selects every landing.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Selector {
     /// `A..B`.
     pub range: Option<LandingRange>,
@@ -48,6 +49,34 @@ impl Selector {
             ..Self::default()
         }
     }
+
+    /// Only the landings of `A..B`.
+    #[must_use]
+    pub fn range(mut self, range: LandingRange) -> Self {
+        self.range = Some(range);
+        self
+    }
+
+    /// Only the landings committed at or after the start of `since`.
+    #[must_use]
+    pub fn since(mut self, since: UtcDate) -> Self {
+        self.since = Some(since);
+        self
+    }
+
+    /// Only the landings committed before the end of `until`.
+    #[must_use]
+    pub fn until(mut self, until: UtcDate) -> Self {
+        self.until = Some(until);
+        self
+    }
+
+    /// Only the newest `last` of what the rest selects.
+    #[must_use]
+    pub fn last(mut self, last: NonZeroU32) -> Self {
+        self.last = Some(last);
+        self
+    }
 }
 
 /// `A..B` on the trunk: the landings after commit `after`, up to and
@@ -70,6 +99,7 @@ pub struct UtcDate {
 
 /// Why a date was refused.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
 pub enum DateError {
     /// Not spelled `YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SSZ`.
     #[error("{0:?} is not a UTC date: write YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ")]

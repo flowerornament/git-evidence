@@ -28,10 +28,10 @@ fn batch(f: &Fixture) -> Vec<EventLine> {
     let run = RunId::derived(1, b"crash");
     lines
         .into_iter()
-        .map(|line| EventLine {
-            run: run.clone(),
-            time: format!("2026-10-08T00:00:0{}.000Z", line.seq),
-            ..line
+        .map(|mut line| {
+            line.run = run.clone();
+            line.time = format!("2026-10-08T00:00:0{}.000Z", line.seq);
+            line
         })
         .collect()
 }
@@ -66,7 +66,7 @@ fn child() {
                     ),
                 )
                 .expect("open");
-            run.result(&key("a"), p99(1.0), None).expect("a");
+            run.result(&key("a"), p99(1.0)).expect("a");
             std::process::abort(); // measuring b when the machine died
         }
         "refresh" => {
@@ -180,13 +180,10 @@ fn a_streamed_run_killed_midway_keeps_its_acknowledged_results_and_is_ended_by_i
     let resumed = f.evidence.resume(&kind("perf"), &run).expect("resume");
     resumed
         .run
-        .close(End::Refused(Reason::new("interrupted", None)), None)
+        .close(End::Refused(Reason::new("interrupted")))
         .expect("close");
     let runs = ask(&f, every_run);
-    assert_eq!(
-        runs[0].end,
-        Some(End::Refused(Reason::new("interrupted", None)))
-    );
+    assert_eq!(runs[0].end, Some(End::Refused(Reason::new("interrupted"))));
     assert_eq!(
         runs[0].outcomes.get("measured"),
         Some(&1),

@@ -7,6 +7,7 @@ use serde::Serialize;
 /// One command a bench times. Its name is the key in the bench's run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum BenchVerb {
     /// `git evidence` with no verb.
     Overview,
@@ -56,6 +57,7 @@ impl BenchTemperature {
 
 /// Wall times of one command, in milliseconds.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct BenchSample {
     pub median_ms: f64,
     /// Median absolute deviation from the median; 0 for one time.
@@ -74,6 +76,7 @@ pub enum BenchFigure {
 
 /// One command's figure at one temperature.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct BenchTiming {
     pub verb: BenchVerb,
     pub temperature: BenchTemperature,
@@ -90,6 +93,7 @@ pub enum BenchOrigin {
 
 /// What a bench measured.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct BenchReport {
     pub origin: BenchOrigin,
     /// Landings on the measured store's trunk.

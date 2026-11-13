@@ -13,12 +13,14 @@ use std::num::NonZeroU32;
 /// The newest landings, oldest first (as `log` and `trend` list them), each
 /// with its run counts.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct Overview {
     pub landings: Vec<LandingSummary>,
 }
 
 /// One landing and, per kind, the runs recorded on its tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct LandingSummary {
     #[serde(flatten)]
     pub landing: Landing,
@@ -28,6 +30,7 @@ pub struct LandingSummary {
 
 /// How many runs of one kind a tree has, and how many of them ended refused.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct RunCount {
     pub runs: i64,
     pub refused: i64,

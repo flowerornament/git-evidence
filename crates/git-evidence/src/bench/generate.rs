@@ -17,8 +17,8 @@
 use super::store::{COMMITTER_EMAIL, COMMITTER_NAME};
 use super::{BenchError, StoreSize};
 use crate::format::event::{
-    Direction, ENVELOPE_VERSION, End, Event, EventLine, Measure, Metric, Open, Outcome, Try,
-    Verdict, VerdictStatus,
+    ENVELOPE_VERSION, End, Event, EventLine, Measure, Metric, Open, Outcome, Try, Verdict,
+    VerdictStatus,
 };
 use crate::format::id::{CommitId, Key, Kind, Machine, MetricName, ProducerName, RunId, TreeId};
 use git_process::Git;
@@ -177,13 +177,9 @@ fn lines(
     );
     let mut results = Vec::new();
     if perf {
-        open.suite.metrics.insert(
-            MetricName::parse(METRIC)?,
-            Metric {
-                unit: "ns".into(),
-                better: Some(Direction::Lower),
-            },
-        );
+        open.suite
+            .metrics
+            .insert(MetricName::parse(METRIC)?, Metric::lower("ns"));
         for k in 0..PERF_KEYS {
             // A quiet series: within 4% of 1000.
             let value = 1000.0 + f64::from((n % 1000 * 7 + k * 13) % 40);
@@ -195,17 +191,14 @@ fn lines(
     } else {
         for k in 0..CHECK_KEYS {
             let duration = 100.0 + f64::from((n % 1000 + k) % 20);
-            let tries = vec![Try {
-                status: VerdictStatus::Pass,
-                duration_ms: Some(duration),
-                cpu_ms: Some(duration * 2.0),
-            }];
+            let tries = vec![
+                Try::new(VerdictStatus::Pass)
+                    .duration_ms(duration)
+                    .cpu_ms(duration * 2.0),
+            ];
             results.push((
                 Key::parse(&format!("check{k}"))?,
-                Outcome::Verdict(Verdict {
-                    status: VerdictStatus::Pass,
-                    tries,
-                }),
+                Outcome::Verdict(Verdict::new(VerdictStatus::Pass, tries)),
             ));
         }
     }

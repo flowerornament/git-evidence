@@ -30,12 +30,7 @@ fn store() -> Fixture {
         perf_lines.extend(lines);
     }
     f.evidence.record(&perf(), &perf_lines).expect("perf setup");
-    let verdict = |status| {
-        git_evidence::Outcome::Verdict(Verdict {
-            status,
-            tries: Vec::new(),
-        })
-    };
+    let verdict = |status| git_evidence::Outcome::Verdict(Verdict::new(status, Vec::new()));
     let mut check_lines = Vec::new();
     for (landing, status) in [(1, VerdictStatus::Pass), (2, VerdictStatus::Fail)] {
         check_lines.extend(f.run_lines(
@@ -132,12 +127,11 @@ fn overview_csv(f: &Fixture) {
 }
 
 fn trend_csv_fills_every_point_column(f: &Fixture) {
-    let query = TrendQuery {
-        metric: "block.p99_ns".parse().expect("name"),
-        key: "parse".parse().expect("name"),
-        machine: None,
-        landings: newest(30),
-    };
+    let query = TrendQuery::new(
+        "block.p99_ns".parse().expect("name"),
+        "parse".parse().expect("name"),
+    )
+    .landings(newest(30));
     let points = api(f, |at| at.trend(&query));
     prints(f, "trend", &["trend", "block.p99_ns", "parse"], &points);
     for row in points.rows() {
@@ -192,14 +186,7 @@ fn keys_csv(f: &Fixture) {
 }
 
 fn diff_csv_puts_before_and_after_side_by_side(f: &Fixture) {
-    let query = DiffQuery {
-        before: tree(f, &f.landings[0]),
-        after: tree(f, &f.landings[1]),
-        kind: None,
-        key: None,
-        metric: None,
-        machine: None,
-    };
+    let query = DiffQuery::new(tree(f, &f.landings[0]), tree(f, &f.landings[1]));
     let rows = api(f, |at| at.diff(&query));
     prints(
         f,
@@ -230,12 +217,7 @@ fn audit_csv(f: &Fixture) {
         ["refs/notes/evidence/check", "refs/notes/evidence/perf"]
     );
     assert_eq!(documented("push"), documented("fetch"));
-    let nothing = git_evidence::Transfer {
-        remote: "origin".to_owned(),
-        refs: Vec::new(),
-        merged: Vec::new(),
-    };
-    assert_eq!(nothing.header().join(","), documented("push"));
+    // The header itself is checked against `Transfer` in `share/remote.rs`.
 }
 
 #[test]

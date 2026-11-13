@@ -169,13 +169,8 @@ fn ask(output: Output, evidence: &Evidence, verb: Verb) -> Result<u8, Box<dyn st
             key,
             metric,
         } => {
-            let query = ShowQuery {
-                shown: shown(evidence, &rev)?,
-                kind,
-                machine,
-                key,
-                metric,
-            };
+            let mut query = ShowQuery::new(shown(evidence, &rev)?);
+            (query.kind, query.machine, query.key, query.metric) = (kind, machine, key, metric);
             show(output, evidence, &query)
         }
         Verb::Diff {
@@ -186,19 +181,15 @@ fn ask(output: Output, evidence: &Evidence, verb: Verb) -> Result<u8, Box<dyn st
             metric,
             machine,
         } => {
-            let query = DiffQuery {
-                before: resolve_tree(evidence, &a)?,
-                after: resolve_tree(evidence, &b)?,
-                kind,
-                key,
-                metric,
-                machine,
-            };
+            let mut query =
+                DiffQuery::new(resolve_tree(evidence, &a)?, resolve_tree(evidence, &b)?);
+            (query.kind, query.key, query.metric, query.machine) = (kind, key, metric, machine);
             Ok(emit(output, &evidence.at(|at| at.diff(&query))?))
         }
         Verb::Sql { query, path } => sql(evidence, query.as_deref(), path),
         Verb::Keys { kind, metric } => {
-            let query = KeysQuery { kind, metric };
+            let mut query = KeysQuery::default();
+            (query.kind, query.metric) = (kind, metric);
             Ok(emit(output, &evidence.at(|at| at.keys(&query))?))
         }
         Verb::Audit
@@ -224,12 +215,8 @@ fn trend(
     if landings.is_everything() {
         landings.last = Some(TrendQuery::DEFAULT_LAST);
     }
-    let query = TrendQuery {
-        metric,
-        key,
-        machine,
-        landings,
-    };
+    let mut query = TrendQuery::new(metric, key);
+    (query.machine, query.landings) = (machine, landings);
     Ok(emit(output, &evidence.at(|at| at.trend(&query))?))
 }
 
@@ -320,10 +307,9 @@ fn bench(
         Ok(measured) => measured,
         Err(error) => {
             if let Some(run) = returned {
-                run.finish().end(End::Refused(Reason::new(
-                    "bench_failed",
-                    Some(&error.to_string()),
-                )))?;
+                run.finish().end(End::Refused(
+                    Reason::new("bench_failed").detail(error.to_string()),
+                ))?;
             }
             return Err(error.into());
         }
@@ -347,12 +333,14 @@ fn selector(
         ),
         None => None,
     };
-    Ok(Selector {
-        range,
-        since: landings.since,
-        until: landings.until,
-        last: landings.last,
-    })
+    let mut selector = Selector::default();
+    (
+        selector.range,
+        selector.since,
+        selector.until,
+        selector.last,
+    ) = (range, landings.since, landings.until, landings.last);
+    Ok(selector)
 }
 
 /// `sql`: the rows as CSV, a NULL as an empty field; with `--path`, the

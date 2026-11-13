@@ -28,6 +28,7 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 /// What would be pushed, inspected before the first push.
 /// Every finding names where it is; an empty `findings` is a clean store.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct Audit {
     pub refs: Vec<RefAudit>,
     /// Every author and committer of the notes commits, which are pushed too:
@@ -38,6 +39,7 @@ pub struct Audit {
 
 /// One kind's ref: how many trees carry notes, and their encoded size.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub struct RefAudit {
     pub name: String,
     pub notes: usize,
@@ -47,6 +49,7 @@ pub struct RefAudit {
 
 /// Something that must not be pushed, or must be looked at first.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Finding {
     /// A line or run the fold cannot read.
     Violation {

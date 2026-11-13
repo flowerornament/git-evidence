@@ -33,6 +33,7 @@ pub struct Bench<'a> {
 
 /// Why a bench could not measure.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum BenchError {
     #[error(transparent)]
     Store(#[from] StoreError),

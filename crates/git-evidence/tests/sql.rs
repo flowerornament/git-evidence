@@ -53,14 +53,14 @@ fn store() -> Fixture {
     );
     record_run(&f, &perf(), 3, &shape, &[("parse", p99(99.0))], None);
     let verdict = |status, duration_ms, cpu_ms| {
-        Outcome::Verdict(Verdict {
+        Outcome::Verdict(Verdict::new(
             status,
-            tries: vec![Try {
-                status,
-                duration_ms,
-                cpu_ms,
+            vec![{
+                let mut t = Try::new(status);
+                (t.duration_ms, t.cpu_ms) = (duration_ms, cpu_ms);
+                t
             }],
-        })
+        ))
     };
     record_run(
         &f,

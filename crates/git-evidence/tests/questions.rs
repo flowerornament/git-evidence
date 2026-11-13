@@ -5,63 +5,43 @@
 mod common;
 
 use common::*;
+use git_evidence::Declaration;
 use git_evidence::NotRecorded;
 use git_evidence::{End, Reason};
-use git_evidence::{KeysQuery, LogQuery, ShowQuery, TrendQuery};
+use git_evidence::{KeysQuery, LogQuery, ShowQuery};
 
 fn keys_matching(glob: &str) -> KeysQuery {
-    KeysQuery {
-        kind: None,
-        metric: Some(glob.to_owned()),
-    }
+    KeysQuery::default().metric(glob)
 }
 
 /// A run that learns its keys and build after opening, as a benchmark that discovers its cases does.
 fn declared_run(f: &Fixture, landing: usize, flags: &str, value: f64) {
-    use git_evidence::{Build, ENVELOPE_VERSION, Event, EventLine, Profile};
+    use git_evidence::{Build, Event, EventLine, Profile};
     let run = git_evidence::RunId::new();
     let mut open = open(&f.landings[landing], &Shape::default(), &[]);
     open.keys = None;
     let events = vec![
         Event::Open(Box::new(open)),
-        Event::Declare {
-            keys: Some(vec![key("parse_large")]),
-            metrics: [(
+        Declaration::keys([key("parse_large")])
+            .metric(
                 git_evidence::MetricName::parse("block.p99_ns").expect("metric"),
-                git_evidence::Metric {
-                    unit: "ns".into(),
-                    better: Some(git_evidence::Direction::Lower),
-                },
-            )]
+                git_evidence::Metric::lower("ns"),
+            )
+            .build({
+                let mut profile = Profile::default();
+                profile.flags = Some(flags.into());
+                let mut build = Build::default();
+                build.profile = Some(profile);
+                build
+            })
             .into(),
-            build: Some(Build {
-                profile: Some(Profile {
-                    target: None,
-                    flags: Some(flags.into()),
-                }),
-                ..Build::default()
-            }),
-        },
-        Event::Result {
-            key: key("parse_large"),
-            outcome: p99(value),
-            location: None,
-        },
-        Event::Close {
-            end: End::Complete,
-            conditions: None,
-        },
+        Event::result(key("parse_large"), p99(value)),
+        Event::close(End::Complete),
     ];
     let lines: Vec<EventLine> = events
         .into_iter()
         .zip(0..)
-        .map(|(event, seq)| EventLine {
-            v: ENVELOPE_VERSION,
-            run: run.clone(),
-            seq,
-            time: tick(),
-            event,
-        })
+        .map(|(event, seq)| event_line(&run.clone(), seq, event))
         .collect();
     f.evidence.record(&perf(), &lines).expect("record");
 }
@@ -130,13 +110,7 @@ fn log_show_and_keys_answer_from_runs() {
         ("perf", Some("bench"), Some(0))
     );
     let run = run_ids(&f, &perf())[0].clone();
-    let detail = ask(&f, |at| {
-        at.show(&ShowQuery {
-            key: Some("parse_*".into()),
-            ..ShowQuery::of(&run)
-        })
-    })
-    .remove(0);
+    let detail = ask(&f, |at| at.show(&ShowQuery::of(&run).key("parse_*"))).remove(0);
     assert_eq!(detail.outcomes.len(), 1, "filtered to one key");
     assert_eq!(detail.conditions, None, "a close may omit conditions");
     let unknown = not_recorded(&f, |at| {
@@ -160,9 +134,10 @@ fn unknown_names_are_named_never_read_as_empty() {
     let f = fixture(2);
     measured_run(&f, 0, 80.0);
     let typo = not_recorded(&f, |at| {
-        at.trend(&TrendQuery {
-            key: "parse_lareg".parse().expect("name"),
-            ..parse_large_trend(2)
+        at.trend(&{
+            let mut q = parse_large_trend(2);
+            q.key = "parse_lareg".parse().expect("name");
+            q
         })
     });
     let NotRecorded::Key { nearest, .. } = &typo else {
@@ -170,9 +145,10 @@ fn unknown_names_are_named_never_read_as_empty() {
     };
     assert!(nearest.iter().any(|n| n == "parse_large"), "{typo:?}");
     let metric = not_recorded(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "p99".parse().expect("name"),
-            ..parse_large_trend(2)
+        at.trend(&{
+            let mut q = parse_large_trend(2);
+            q.metric = "p99".parse().expect("name");
+            q
         })
     });
     assert!(matches!(metric, NotRecorded::Metric { .. }), "{metric:?}");
@@ -205,10 +181,7 @@ fn refused_keys_give_no_rows() {
         Some(End::Complete),
     );
     let points = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            machine: Some("bench".parse().expect("name")),
-            ..parse_large_trend(2)
-        })
+        at.trend(&parse_large_trend(2).machine("bench".parse().expect("name")))
     });
     assert_eq!(points, Vec::new());
     let elsewhere = ask(&f, |at| at.trend(&parse_large_trend(2)));
@@ -232,10 +205,10 @@ fn a_build_declared_after_opening_is_part_of_the_variant() {
     assert_eq!(points.len(), 2, "{points:?}");
     let shown = ask(&f, |at| at.run(&points[1].run));
     assert!(
-        shown.params.contains(&git_evidence::Param {
-            name: "flags".to_owned(),
-            value: "debug".to_owned(),
-        }),
+        shown
+            .params
+            .iter()
+            .any(|p| p.name == "flags" && p.value == "debug"),
         "{shown:?}"
     );
     let [release, debug] =
@@ -249,7 +222,7 @@ fn only_values_are_trend_rows_and_log_lists_every_run() {
     // a value, so none is a trend row; each is a run in the log.
     let f = fixture(2);
     measured_run(&f, 0, 80.0);
-    let skipped = git_evidence::Outcome::Skipped(Reason::new("compile_error", None));
+    let skipped = git_evidence::Outcome::Skipped(Reason::new("compile_error"));
     record_run(
         &f,
         &perf(),
@@ -287,12 +260,7 @@ fn an_unknown_key_or_metric_in_show_and_keys_is_not_recorded() {
     let f = fixture(1);
     measured_run(&f, 0, 80.0);
     let run = run_ids(&f, &perf())[0].clone();
-    let shown = not_recorded(&f, |at| {
-        at.show(&ShowQuery {
-            key: Some("parse_lareg".into()),
-            ..ShowQuery::of(&run)
-        })
-    });
+    let shown = not_recorded(&f, |at| at.show(&ShowQuery::of(&run).key("parse_lareg")));
     let NotRecorded::Key { nearest, .. } = &shown else {
         panic!("{shown:?}")
     };

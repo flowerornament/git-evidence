@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 
 /// What `diff` asks: two trees, and optional filters.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct DiffQuery {
     pub before: TreeId,
     pub after: TreeId,
@@ -27,9 +28,54 @@ pub struct DiffQuery {
     pub machine: Option<Machine>,
 }
 
+impl DiffQuery {
+    /// Every number that differs between `before` and `after`; narrow it
+    /// through the fields.
+    #[must_use]
+    pub const fn new(before: TreeId, after: TreeId) -> Self {
+        Self {
+            before,
+            after,
+            kind: None,
+            key: None,
+            metric: None,
+            machine: None,
+        }
+    }
+
+    /// Only the runs of `kind`.
+    #[must_use]
+    pub fn kind(mut self, kind: Kind) -> Self {
+        self.kind = Some(kind);
+        self
+    }
+
+    /// Only the numbers of `key`.
+    #[must_use]
+    pub fn key(mut self, key: Key) -> Self {
+        self.key = Some(key);
+        self
+    }
+
+    /// Only the metrics matching the glob `metric`.
+    #[must_use]
+    pub fn metric(mut self, metric: impl Into<String>) -> Self {
+        self.metric = Some(metric.into());
+        self
+    }
+
+    /// Only the runs on `machine`.
+    #[must_use]
+    pub fn machine(mut self, machine: Machine) -> Self {
+        self.machine = Some(machine);
+        self
+    }
+}
+
 /// One number that differs between the two sides; a side without it is
 /// `None`.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct Difference {
     pub kind: Kind,
     pub machine: Option<Machine>,
@@ -44,6 +90,7 @@ pub struct Difference {
 /// A recorded number: the newest complete run's, and how many complete runs
 /// of the series on that tree recorded it.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct RunValue {
     pub value: f64,
     pub unit: String,
@@ -54,6 +101,7 @@ pub struct RunValue {
 /// How far `after` is from `before`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum Change {
     /// A fraction of `before`: the unit measures an amount (time, bytes, a count).
     Relative(f64),

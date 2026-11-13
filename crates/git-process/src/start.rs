@@ -21,6 +21,7 @@ pub const START_FAILURE_DIR: &str = "GIT_PROCESS_START_FAILURE_DIR";
 /// executable identity. Arguments and environment are deliberately absent.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[non_exhaustive]
 pub struct StartFailureRecord {
     pub time: crate::Timestamp,
     pub pid: u32,

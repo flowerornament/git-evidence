@@ -5,12 +5,10 @@
 mod common;
 
 use common::*;
+use git_evidence::Declaration;
 use git_evidence::Problem;
 use git_evidence::TrendQuery;
-use git_evidence::{
-    Direction, ENVELOPE_VERSION, End, Event, EventLine, Measure, Metric, Outcome, Try, Verdict,
-    VerdictStatus,
-};
+use git_evidence::{End, Event, EventLine, Metric, Outcome, Try, Verdict, VerdictStatus};
 use git_evidence::{MetricName, RunId};
 use git_evidence::{RecordError, Refusal};
 
@@ -19,10 +17,7 @@ fn metric(name: &str) -> MetricName {
 }
 
 fn ns() -> Metric {
-    Metric {
-        unit: "ns".into(),
-        better: Some(Direction::Lower),
-    }
+    Metric::lower("ns")
 }
 
 fn refusal(lines: &[EventLine], f: &Fixture) -> Refusal {
@@ -36,30 +31,22 @@ fn refusal(lines: &[EventLine], f: &Fixture) -> Refusal {
 fn record_refuses_what_its_declarations_do_not_cover_and_writes_nothing() {
     let f = fixture(1);
     // A measure of a metric the run never declared.
-    let lines = vec![EventLine {
-        v: ENVELOPE_VERSION,
-        run: RunId::new(),
-        seq: 0,
-        time: tick(),
-        event: Event::Open(Box::new(open(
+    let lines = vec![event_line(
+        &RunId::new(),
+        0,
+        Event::Open(Box::new(open(
             &f.landings[0],
             &Shape::default(),
             &["parse_large"],
         ))),
-    }];
+    )];
     let run = lines[0].run.clone();
     let mut undeclared = lines.clone();
-    undeclared.push(EventLine {
-        v: ENVELOPE_VERSION,
-        run: run.clone(),
-        seq: 1,
-        time: tick(),
-        event: Event::Result {
-            key: key("parse_large"),
-            outcome: p99(1.0),
-            location: None,
-        },
-    });
+    undeclared.push(event_line(
+        &run.clone(),
+        1,
+        Event::result(key("parse_large"), p99(1.0)),
+    ));
     let refused = refusal(&undeclared, &f);
     assert!(
         matches!(
@@ -77,38 +64,19 @@ fn record_refuses_what_its_declarations_do_not_cover_and_writes_nothing() {
     );
     // A redefinition and a derived name, declared late.
     for (name, declared, expect) in [
-        (
-            "block.p99_ns",
-            Metric {
-                unit: "us".into(),
-                ..ns()
-            },
-            "redefined",
-        ),
+        ("block.p99_ns", Metric::new("us", ns().better), "redefined"),
         ("verdict.pass.duration_ms", ns(), "derived metric"),
     ] {
         let mut opened = open(&f.landings[0], &Shape::default(), &["parse_large"]);
         opened.suite.metrics.insert(metric("block.p99_ns"), ns());
         let run = RunId::new();
         let lines = vec![
-            EventLine {
-                v: ENVELOPE_VERSION,
-                run: run.clone(),
-                seq: 0,
-                time: tick(),
-                event: Event::Open(Box::new(opened)),
-            },
-            EventLine {
-                v: ENVELOPE_VERSION,
-                run,
-                seq: 1,
-                time: tick(),
-                event: Event::Declare {
-                    keys: None,
-                    metrics: [(metric(name), declared)].into(),
-                    build: None,
-                },
-            },
+            event_line(&run.clone(), 0, Event::Open(Box::new(opened))),
+            event_line(
+                &run,
+                1,
+                Declaration::default().metric(metric(name), declared).into(),
+            ),
         ];
         let refused = refusal(&lines, &f);
         assert!(
@@ -171,29 +139,28 @@ fn a_metric_recorded_in_two_units_keeps_each_unit() {
         Some(End::Complete),
     );
     let answer = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "block.p99_ns".parse().expect("name"),
-            key: "parse_large".parse().expect("name"),
-            machine: None,
-            landings: newest(10),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "block.p99_ns".parse().expect("name"),
+                "parse_large".parse().expect("name"),
+            )
+            .landings(newest(10)),
+        )
     });
     let units: Vec<(f64, &str)> = answer.iter().map(|p| (p.value, p.unit.as_str())).collect();
     assert_eq!(units, vec![(80_000.0, "ns"), (81.0, "us")], "{answer:?}");
 }
 
 fn verdict(status: VerdictStatus, durations: &[Option<f64>]) -> Outcome {
-    Outcome::Verdict(Verdict {
-        status,
-        tries: durations
-            .iter()
-            .map(|d| Try {
-                status,
-                duration_ms: *d,
-                cpu_ms: None,
-            })
-            .collect(),
-    })
+    let tries = durations
+        .iter()
+        .map(|d| {
+            let mut t = Try::new(status);
+            t.duration_ms = *d;
+            t
+        })
+        .collect();
+    Outcome::Verdict(Verdict::new(status, tries))
 }
 
 #[test]
@@ -246,17 +213,15 @@ fn verdict_durations_are_derived_per_status_and_never_guessed() {
 }
 
 fn timed(status: VerdictStatus, tries: &[(f64, Option<f64>)]) -> Outcome {
-    Outcome::Verdict(Verdict {
-        status,
-        tries: tries
-            .iter()
-            .map(|(wall, cpu)| Try {
-                status,
-                duration_ms: Some(*wall),
-                cpu_ms: *cpu,
-            })
-            .collect(),
-    })
+    let tries = tries
+        .iter()
+        .map(|(wall, cpu)| {
+            let mut t = Try::new(status).duration_ms(*wall);
+            t.cpu_ms = *cpu;
+            t
+        })
+        .collect();
+    Outcome::Verdict(Verdict::new(status, tries))
 }
 
 #[test]
@@ -329,12 +294,13 @@ fn verdict_cpu_times_are_summed_like_durations_and_absent_is_never_zero() {
     // Asked for by name, the missing CPU time is a known derived metric with
     // no row, not an unknown metric.
     let points = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "verdict.pass.cpu_ms".parse().expect("name"),
-            key: "fmt".parse().expect("name"),
-            machine: None,
-            landings: newest(1),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "verdict.pass.cpu_ms".parse().expect("name"),
+                "fmt".parse().expect("name"),
+            )
+            .landings(newest(1)),
+        )
     });
     assert_eq!(points, Vec::new());
 }
@@ -354,22 +320,18 @@ fn a_recorded_measure_reads_back_with_its_declaration_and_origin() {
         &shape,
         &[(
             "parse_large",
-            Outcome::Measured(vec![Measure {
-                metric: metric("plan.regions"),
-                value: 3.0,
-                n: None,
-                mad: None,
-            }]),
+            Outcome::measured(metric("plan.regions"), 3.0).expect("finite"),
         )],
         Some(End::Complete),
     );
     let answer = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "plan.regions".parse().expect("name"),
-            key: "parse_large".parse().expect("name"),
-            machine: None,
-            landings: newest(1),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "plan.regions".parse().expect("name"),
+                "parse_large".parse().expect("name"),
+            )
+            .landings(newest(1)),
+        )
     });
     assert_eq!(answer[0].unit, "{count}");
     let run = answer[0].run.clone();
@@ -390,12 +352,13 @@ fn a_missing_derived_duration_is_no_row_and_no_error() {
         Some(End::Complete),
     );
     let answer = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "verdict.pass.duration_ms".parse().expect("name"),
-            key: "fmt".parse().expect("name"),
-            machine: None,
-            landings: newest(1),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "verdict.pass.duration_ms".parse().expect("name"),
+                "fmt".parse().expect("name"),
+            )
+            .landings(newest(1)),
+        )
     });
     assert_eq!(answer, Vec::new());
 }
@@ -415,12 +378,13 @@ fn a_line_of_another_envelope_version_is_a_violation_at_read() {
     let raw: Vec<EventLine> = lines;
     append_raw(&f, &perf(), 0, &raw);
     let answer = f.evidence.at(|at| {
-        at.trend(&TrendQuery {
-            metric: "block.p99_ns".parse().expect("name"),
-            key: "parse_large".parse().expect("name"),
-            machine: None,
-            landings: newest(1),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "block.p99_ns".parse().expect("name"),
+                "parse_large".parse().expect("name"),
+            )
+            .landings(newest(1)),
+        )
     });
     assert!(answer.is_err(), "the run is not read: {answer:?}");
     let audit = f.evidence.audit().expect("audit");
@@ -440,21 +404,23 @@ fn a_verdict_of_another_status_has_no_pass_duration() {
         Some(End::Complete),
     );
     let answer = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "verdict.pass.duration_ms".parse().expect("name"),
-            key: "fmt".parse().expect("name"),
-            machine: None,
-            landings: newest(1),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "verdict.pass.duration_ms".parse().expect("name"),
+                "fmt".parse().expect("name"),
+            )
+            .landings(newest(1)),
+        )
     });
     assert_eq!(answer, Vec::new());
     let failed = ask(&f, |at| {
-        at.trend(&TrendQuery {
-            metric: "verdict.fail.duration_ms".parse().expect("name"),
-            key: "fmt".parse().expect("name"),
-            machine: None,
-            landings: newest(1),
-        })
+        at.trend(
+            &TrendQuery::new(
+                "verdict.fail.duration_ms".parse().expect("name"),
+                "fmt".parse().expect("name"),
+            )
+            .landings(newest(1)),
+        )
     });
     assert_eq!(failed.len(), 1);
 }

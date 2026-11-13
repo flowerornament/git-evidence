@@ -6,12 +6,12 @@ use super::batch::{OpensOnly, RunLocator, record, record_dry_run};
 use super::destination::{Destination, replace_file};
 use super::{Finish, RecordError, Refusal};
 use crate::format::event::{
-    Build, ENVELOPE_VERSION, End, Event, EventLine, Metric, Open, Outcome, Timestamp,
+    Declaration, ENVELOPE_VERSION, End, Event, EventLine, Open, Outcome, Timestamp,
 };
 use crate::format::fold::{Problem, fold};
-use crate::format::id::{Key, Kind, MetricName, RunId, TreeId};
+use crate::format::id::{Key, Kind, RunId, TreeId};
 use crate::store::Store;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 /// A run being written event by event, for producers that stream. Each call is
 /// one durable write: into this store, or, for a run returned to the store of
@@ -249,51 +249,56 @@ impl Run {
     /// # Errors
     /// As [`Evidence::record`](crate::Evidence::record): keys declared twice, a declaration after a result,
     /// a redefined metric or a derived metric name is refused.
-    pub fn declare(
-        &mut self,
-        keys: Option<Vec<Key>>,
-        metrics: BTreeMap<MetricName, Metric>,
-        build: Option<Build>,
-    ) -> Result<(), RecordError> {
-        self.write(Event::Declare {
-            keys,
-            metrics,
-            build,
-        })
+    pub fn declare(&mut self, declaration: Declaration) -> Result<(), RecordError> {
+        self.write(declaration.into())
     }
 
     /// Records one key's outcome, durable before return.
     ///
     /// # Errors
     /// As [`Evidence::record`](crate::Evidence::record): an undeclared key or a second result is refused.
-    pub fn result(
+    pub fn result(&mut self, key: &Key, outcome: Outcome) -> Result<(), RecordError> {
+        self.write(Event::Result {
+            key: key.clone(),
+            outcome,
+            location: None,
+        })
+    }
+
+    /// Records one key's outcome with the code site that produced it
+    /// (`benches/parser.rs:118`), durable before return.
+    ///
+    /// # Errors
+    /// As [`Run::result`].
+    pub fn result_at(
         &mut self,
         key: &Key,
         outcome: Outcome,
-        location: Option<String>,
+        location: impl Into<String>,
     ) -> Result<(), RecordError> {
         self.write(Event::Result {
             key: key.clone(),
             outcome,
-            location,
+            location: Some(location.into()),
         })
     }
 
-    /// Ends the run.
+    /// Ends the run. To close with conditions, or to write the last results
+    /// and the close as one commit, use [`Run::finish`].
     ///
     /// # Errors
     /// As [`Evidence::record`](crate::Evidence::record): `complete` with keys unanswered is refused.
-    pub fn close(
-        mut self,
-        end: End,
-        conditions: Option<serde_json::Value>,
-    ) -> Result<(), RecordError> {
-        self.write(Event::Close { end, conditions })
+    pub fn close(mut self, end: End) -> Result<(), RecordError> {
+        self.write(Event::Close {
+            end,
+            conditions: None,
+        })
     }
 }
 
 /// A run found again after a crash, with where it stopped.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Resumed {
     pub run: Run,
     /// The keys it declared; `None` when it stopped before declaring them.

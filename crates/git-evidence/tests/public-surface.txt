@@ -16,6 +16,7 @@ Build
 Change
 CommitId
 DateError
+Declaration
 DeclaredMeasure
 DiffQuery
 Difference

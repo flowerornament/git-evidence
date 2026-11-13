@@ -24,12 +24,7 @@ fn store() -> Fixture {
         ));
     }
     f.evidence.record(&perf(), &perf_lines).expect("perf setup");
-    let verdict = |status| {
-        git_evidence::Outcome::Verdict(Verdict {
-            status,
-            tries: Vec::new(),
-        })
-    };
+    let verdict = |status| git_evidence::Outcome::Verdict(Verdict::new(status, Vec::new()));
     let mut check_lines = Vec::new();
     for (landing, status) in [(1, VerdictStatus::Pass), (2, VerdictStatus::Fail)] {
         check_lines.extend(f.run_lines(
@@ -86,12 +81,11 @@ fn the_overview_is_the_api_rows(f: &Fixture) {
 }
 
 fn trend_is_the_api_rows(f: &Fixture) {
-    let query = TrendQuery {
-        metric: "block.p99_ns".parse().expect("name"),
-        key: "parse".parse().expect("name"),
-        machine: None,
-        landings: newest(30),
-    };
+    let query = TrendQuery::new(
+        "block.p99_ns".parse().expect("name"),
+        "parse".parse().expect("name"),
+    )
+    .landings(newest(30));
     prints(
         f,
         &["trend", "block.p99_ns", "parse"],
@@ -122,10 +116,7 @@ fn show_is_the_api_rows(f: &Fixture) {
     assert_eq!(runs.len(), 2, "perf and check");
     prints(f, &["show", f.landings[2].as_str()], &runs);
     let verdicts = api(f, |at| {
-        at.show(&ShowQuery {
-            metric: Some("verdict".into()),
-            ..ShowQuery::tree(&landing)
-        })
+        at.show(&ShowQuery::tree(&landing).metric("verdict"))
     });
     prints(
         f,
@@ -153,14 +144,7 @@ fn keys_is_the_api_rows(f: &Fixture) {
 }
 
 fn diff_is_the_api_rows(f: &Fixture) {
-    let query = DiffQuery {
-        before: tree(f, &f.landings[0]),
-        after: tree(f, &f.landings[1]),
-        kind: None,
-        key: None,
-        metric: None,
-        machine: None,
-    };
+    let query = DiffQuery::new(tree(f, &f.landings[0]), tree(f, &f.landings[1]));
     prints(
         f,
         &["diff", f.landings[0].as_str(), f.landings[1].as_str()],

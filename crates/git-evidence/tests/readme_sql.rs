@@ -47,23 +47,20 @@ fn store() -> Fixture {
         2,
         &laptop,
         &[
-            (
-                "parse_large",
-                Outcome::Skipped(Reason::new("build_failed", None)),
-            ),
+            ("parse_large", Outcome::Skipped(Reason::new("build_failed"))),
             ("parse_small", refused("noisy_host")),
         ],
         Some(End::Complete),
     );
     let verdict = |status, duration_ms, cpu_ms| {
-        Outcome::Verdict(Verdict {
+        Outcome::Verdict(Verdict::new(
             status,
-            tries: vec![Try {
-                status,
-                duration_ms,
-                cpu_ms,
+            vec![{
+                let mut t = Try::new(status);
+                (t.duration_ms, t.cpu_ms) = (duration_ms, cpu_ms);
+                t
             }],
-        })
+        ))
     };
     let suite = |name| Shape {
         producer: "checker",

@@ -19,6 +19,7 @@ use std::collections::BTreeMap;
 
 /// A run with its outcomes, as the index holds it.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct RunDetail {
     pub run: RunId,
     pub kind: Kind,
@@ -48,6 +49,7 @@ pub struct RunDetail {
 /// One parameter of a run: its name and its value as text (a JSON value
 /// other than a string as JSON).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct Param {
     pub name: String,
     pub value: String,
@@ -55,6 +57,7 @@ pub struct Param {
 
 /// One key of a run: its outcome, and where the producer said it was found.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct KeyOutcome {
     pub key: Key,
     pub outcome: ShownOutcome,
@@ -111,6 +114,7 @@ pub enum Shown {
 /// pattern, not a name) over each run's kind and machine and each outcome's
 /// key and metric.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct ShowQuery {
     pub shown: Shown,
     pub kind: Option<String>,
@@ -123,16 +127,18 @@ impl ShowQuery {
     /// The whole of one run: every key and metric.
     #[must_use]
     pub fn of(run: &RunId) -> Self {
-        Self::all(Shown::Run(run.clone()))
+        Self::new(Shown::Run(run.clone()))
     }
 
     /// Every run on `tree`, every key and metric.
     #[must_use]
     pub fn tree(tree: &TreeId) -> Self {
-        Self::all(Shown::Tree(tree.clone()))
+        Self::new(Shown::Tree(tree.clone()))
     }
 
-    const fn all(shown: Shown) -> Self {
+    /// Every key and metric of what `shown` names; narrow it through the fields.
+    #[must_use]
+    pub const fn new(shown: Shown) -> Self {
         Self {
             shown,
             kind: None,
@@ -140,6 +146,34 @@ impl ShowQuery {
             key: None,
             metric: None,
         }
+    }
+
+    /// Only the runs whose kind matches the glob `kind`.
+    #[must_use]
+    pub fn kind(mut self, kind: impl Into<String>) -> Self {
+        self.kind = Some(kind.into());
+        self
+    }
+
+    /// Only the runs whose machine matches the glob `machine`.
+    #[must_use]
+    pub fn machine(mut self, machine: impl Into<String>) -> Self {
+        self.machine = Some(machine.into());
+        self
+    }
+
+    /// Only the outcomes whose key matches the glob `key`.
+    #[must_use]
+    pub fn key(mut self, key: impl Into<String>) -> Self {
+        self.key = Some(key.into());
+        self
+    }
+
+    /// Only the numbers whose metric matches the glob `metric`.
+    #[must_use]
+    pub fn metric(mut self, metric: impl Into<String>) -> Self {
+        self.metric = Some(metric.into());
+        self
     }
 }
 

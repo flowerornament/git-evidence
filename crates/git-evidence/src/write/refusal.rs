@@ -7,6 +7,7 @@ use crate::store::StoreError;
 
 /// A refused or failed record.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum RecordError {
     #[error(transparent)]
     Store(#[from] StoreError),

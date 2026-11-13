@@ -16,6 +16,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// What a record did.
 #[derive(Debug, Clone, Default, PartialEq, Eq, serde::Serialize)]
+#[non_exhaustive]
 pub struct Recorded {
     /// Lines appended (or, from [`Evidence::record_dry_run`](crate::Evidence::record_dry_run), that would be).
     pub written: usize,
@@ -30,6 +31,7 @@ pub struct Recorded {
 /// One run's lines in a batch: written, already recorded, and the run's
 /// encoded size once the batch is in.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize)]
+#[non_exhaustive]
 pub struct RunLines {
     pub written: usize,
     pub already_present: usize,
@@ -460,16 +462,16 @@ mod tests {
     fn a_streamed_run_finds_its_tree_and_refuses_a_second_result() {
         let (_dir, store, kind, open, tree) = setup();
         let mut run = Run::open(&store, &kind, open).expect("open");
-        run.result(&key("a"), measured(), None).expect("a");
-        assert!(run.result(&key("a"), measured(), None).is_err());
-        assert!(run.result(&key("zzz"), measured(), None).is_err());
-        run.close(End::Refused(Reason::new("interrupted", None)), None)
+        run.result(&key("a"), measured()).expect("a");
+        assert!(run.result(&key("a"), measured()).is_err());
+        assert!(run.result(&key("zzz"), measured()).is_err());
+        run.close(End::Refused(Reason::new("interrupted")))
             .expect("close");
         let folded = fold(&store.read_note(&kind, &tree).expect("read").expect("note"));
         assert!(folded.violations.is_empty(), "{:?}", folded.violations);
         assert_eq!(
             folded.runs[0].outcome(&key("b")),
-            Some(Outcome::Refused(Reason::new("interrupted", None)))
+            Some(Outcome::Refused(Reason::new("interrupted")))
         );
     }
 
@@ -496,7 +498,7 @@ mod tests {
                 &lines[0].run,
                 2,
                 Event::Close {
-                    end: End::Refused(crate::format::event::Reason::new("noisy_host", None)),
+                    end: End::Refused(crate::format::event::Reason::new("noisy_host")),
                     conditions: None,
                 },
             ),
@@ -519,14 +521,10 @@ mod tests {
             let mut lines = whole_run(&open);
             lines[1].event = Event::Result {
                 key: key("a"),
-                outcome: Outcome::Verdict(Verdict {
-                    status: VerdictStatus::Pass,
-                    tries: vec![Try {
-                        status: VerdictStatus::Pass,
-                        duration_ms: Some(bad),
-                        cpu_ms: None,
-                    }],
-                }),
+                outcome: Outcome::Verdict(Verdict::new(
+                    VerdictStatus::Pass,
+                    vec![Try::new(VerdictStatus::Pass).duration_ms(bad)],
+                )),
                 location: None,
             };
             let error = record(&store, &kind, &lines, &OpensOnly).expect_err("refused");
@@ -588,14 +586,10 @@ mod tests {
             let mut lines = whole_run(&open);
             lines[1].event = Event::Result {
                 key: key("a"),
-                outcome: Outcome::Verdict(Verdict {
-                    status: VerdictStatus::Pass,
-                    tries: vec![Try {
-                        status: VerdictStatus::Pass,
-                        duration_ms: Some(10.0),
-                        cpu_ms: Some(cpu),
-                    }],
-                }),
+                outcome: Outcome::Verdict(Verdict::new(
+                    VerdictStatus::Pass,
+                    vec![Try::new(VerdictStatus::Pass).duration_ms(10.0).cpu_ms(cpu)],
+                )),
                 location: None,
             };
             lines
@@ -630,14 +624,10 @@ mod tests {
         let mut lines = whole_run(&open);
         lines[1].event = Event::Result {
             key: key("a"),
-            outcome: Outcome::Verdict(Verdict {
-                status: VerdictStatus::Pass,
-                tries: vec![Try {
-                    status: VerdictStatus::Pass,
-                    duration_ms: Some(-3.0),
-                    cpu_ms: None,
-                }],
-            }),
+            outcome: Outcome::Verdict(Verdict::new(
+                VerdictStatus::Pass,
+                vec![Try::new(VerdictStatus::Pass).duration_ms(-3.0)],
+            )),
             location: None,
         };
         let error = record(&store, &kind, &lines, &OpensOnly).expect_err("refused");
@@ -665,10 +655,7 @@ mod tests {
         // One example of every variant, and of every rule a run can break.
         let run = RunId::derived(1, b"r");
         let metric = MetricName::parse("m").expect("metric");
-        let ns = Metric {
-            unit: "ns".into(),
-            better: None,
-        };
+        let ns = Metric::new("ns", None);
         let problems = [
             Problem::Unreadable("x".into()),
             Problem::ConflictingSeq { seq: 1 },

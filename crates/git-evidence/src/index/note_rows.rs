@@ -358,6 +358,7 @@ fn insert_outcome(
 /// recorded it or the index derived it from a verdict's tries. Serialized,
 /// part of an outcome's digest.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[non_exhaustive]
 pub struct DeclaredMeasure {
     pub metric: MetricName,
     pub value: f64,
@@ -374,6 +375,7 @@ pub struct DeclaredMeasure {
 /// and never stores them in notes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum MeasureOrigin {
     Recorded,
     Derived,

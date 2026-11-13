@@ -167,6 +167,7 @@ fn hex(bytes: &[u8]) -> String {
 /// The rows one `sql` query returned: its columns, and one value per column
 /// in each row.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub struct Rows {
     /// The column names, distinct, in order.
     pub columns: Vec<String>,
@@ -176,6 +177,7 @@ pub struct Rows {
 
 /// Why `sql` did not run a statement.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum SqlError {
     #[error("the statement would write; sql only reads (the index is a cache of the notes)")]
     Writes,

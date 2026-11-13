@@ -26,6 +26,7 @@ const WAL_TRUNCATE_BYTES: u64 = 64 << 20;
 
 /// An index failure.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum IndexError {
     #[error(transparent)]
     Git(#[from] GitError),
@@ -51,6 +52,7 @@ pub enum IndexError {
 /// The state an answer was computed at: the trunk tip, every kind's notes tip,
 /// and the views version.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[non_exhaustive]
 pub struct Pin {
     pub trunk: Option<ObjectId>,
     /// Kind → notes tip.

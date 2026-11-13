@@ -10,14 +10,7 @@ use common::*;
 use git_evidence::{Change, DiffQuery, Difference, End, NotRecorded, Reason};
 
 fn between(f: &Fixture, before: usize, after: usize) -> DiffQuery {
-    DiffQuery {
-        before: tree(f, &f.landings[before]),
-        after: tree(f, &f.landings[after]),
-        kind: None,
-        key: None,
-        metric: None,
-        machine: None,
-    }
+    DiffQuery::new(tree(f, &f.landings[before]), tree(f, &f.landings[after]))
 }
 
 /// Each row as (key, metric, before, after).
@@ -95,7 +88,7 @@ fn the_newest_complete_run_gives_a_number_and_the_row_names_it() {
         Some(End::Complete),
     );
     // Neither a refused nor an open run gives a number, however new.
-    let refused = End::Refused(Reason::new("noisy_host", None));
+    let refused = End::Refused(Reason::new("noisy_host"));
     record_run(
         &f,
         &perf(),
@@ -311,33 +304,15 @@ fn filters_narrow_the_rows() {
     let asked = |query: DiffQuery| ask(&f, |at| at.diff(&query)).len();
     assert_eq!(asked(between(&f, 0, 1)), 3);
     assert_eq!(
-        asked(DiffQuery {
-            machine: Some("laptop".parse().expect("machine")),
-            ..between(&f, 0, 1)
-        }),
+        asked(between(&f, 0, 1).machine("laptop".parse().expect("machine"))),
         1
     );
+    assert_eq!(asked(between(&f, 0, 1).metric("compile.*")), 1);
     assert_eq!(
-        asked(DiffQuery {
-            metric: Some("compile.*".into()),
-            ..between(&f, 0, 1)
-        }),
-        1
-    );
-    assert_eq!(
-        asked(DiffQuery {
-            key: Some("chain".parse().expect("key")),
-            ..between(&f, 0, 1)
-        }),
+        asked(between(&f, 0, 1).key("chain".parse().expect("key"))),
         2
     );
-    assert_eq!(
-        asked(DiffQuery {
-            kind: Some(kind("gates")),
-            ..between(&f, 0, 1)
-        }),
-        0
-    );
+    assert_eq!(asked(between(&f, 0, 1).kind(kind("gates"))), 0);
 }
 
 #[test]
@@ -356,18 +331,10 @@ fn a_tree_with_no_run_an_unknown_key_or_an_unmatched_glob_is_not_recorded() {
     let empty = not_recorded(&f, |at| at.diff(&between(&f, 0, 2)));
     assert!(matches!(empty, NotRecorded::Tree(_)), "{empty:?}");
     let key = not_recorded(&f, |at| {
-        at.diff(&DiffQuery {
-            key: Some("chian".parse().expect("key")),
-            ..between(&f, 0, 1)
-        })
+        at.diff(&between(&f, 0, 1).key("chian".parse().expect("key")))
     });
     assert!(matches!(key, NotRecorded::Key { .. }), "{key:?}");
-    let glob = not_recorded(&f, |at| {
-        at.diff(&DiffQuery {
-            metric: Some("zzz*".into()),
-            ..between(&f, 0, 1)
-        })
-    });
+    let glob = not_recorded(&f, |at| at.diff(&between(&f, 0, 1).metric("zzz*")));
     assert!(matches!(glob, NotRecorded::MetricGlob { .. }), "{glob:?}");
 }
 

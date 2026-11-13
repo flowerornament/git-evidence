@@ -15,6 +15,7 @@ use std::collections::BTreeMap;
 
 /// One run on a tree, summarised.
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[non_exhaustive]
 pub struct LogEntry {
     pub run: RunId,
     pub kind: Kind,
@@ -33,6 +34,7 @@ pub struct LogEntry {
 
 /// What `log` asks.
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub enum LogQuery {
     /// `git evidence log REV`: every run on this tree.
     Tree(TreeId),

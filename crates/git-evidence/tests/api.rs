@@ -4,9 +4,10 @@
 mod common;
 
 use common::*;
+use git_evidence::Declaration;
 use git_evidence::{
-    Direction, End, Evidence, Metric, MetricName, Outcome, Reason, Selector, TrendQuery, Try,
-    Verdict, VerdictStatus,
+    End, Evidence, Metric, MetricName, Outcome, Reason, Selector, TrendQuery, Try, Verdict,
+    VerdictStatus,
 };
 
 fn evidence(f: &Fixture) -> Evidence {
@@ -16,10 +17,7 @@ fn evidence(f: &Fixture) -> Evidence {
 fn declaring_ns(mut open: git_evidence::Open) -> git_evidence::Open {
     open.suite.metrics.insert(
         MetricName::parse("block.p99_ns").expect("metric"),
-        Metric {
-            unit: "ns".into(),
-            better: Some(Direction::Lower),
-        },
+        Metric::lower("ns"),
     );
     open
 }
@@ -39,19 +37,18 @@ fn a_run_written_through_evidence_is_asked_back_with_its_meaning() {
                 )),
             )
             .expect("open");
-        run.result(&key("parse_large"), p99(value), None)
-            .expect("result");
-        run.close(End::Complete, None).expect("close");
+        run.result(&key("parse_large"), p99(value)).expect("result");
+        run.close(End::Complete).expect("close");
     }
     let points = evidence
         .at(|at| {
-            at.trend(&TrendQuery {
-                landings: Selector::newest(10.try_into().expect("not zero")),
-                ..TrendQuery::new(
+            at.trend(
+                &TrendQuery::new(
                     "block.p99_ns".parse().expect("metric"),
                     "parse_large".parse().expect("key"),
                 )
-            })
+                .landings(Selector::newest(10.try_into().expect("not zero"))),
+            )
         })
         .expect("ask");
     assert_eq!(points[0].unit, "ns");
@@ -60,12 +57,13 @@ fn a_run_written_through_evidence_is_asked_back_with_its_meaning() {
     let (first, trend, second) = evidence
         .at(|at| {
             let first = at.pin().clone();
-            let trend = at.trend(&git_evidence::TrendQuery {
-                metric: "block.p99_ns".parse().expect("name"),
-                key: "parse_large".parse().expect("name"),
-                machine: None,
-                landings: newest(10),
-            })?;
+            let trend = at.trend(
+                &git_evidence::TrendQuery::new(
+                    "block.p99_ns".parse().expect("name"),
+                    "parse_large".parse().expect("name"),
+                )
+                .landings(newest(10)),
+            )?;
             at.keys(&git_evidence::KeysQuery::default())?;
             Ok((first, trend, at.pin().clone()))
         })
@@ -87,14 +85,10 @@ fn finish_writes_the_rest_of_a_run_in_one_commit_or_nothing() {
             .expect("count")
     };
     let pass = |ms: f64| {
-        Outcome::Verdict(Verdict {
-            status: VerdictStatus::Pass,
-            tries: vec![Try {
-                status: VerdictStatus::Pass,
-                duration_ms: Some(ms),
-                cpu_ms: None,
-            }],
-        })
+        Outcome::Verdict(Verdict::new(
+            VerdictStatus::Pass,
+            vec![Try::new(VerdictStatus::Pass).duration_ms(ms)],
+        ))
     };
     // A batch naming an undeclared key is refused whole, and the run continues.
     let run = evidence.run(&kind("gates"), opened.clone()).expect("open");
@@ -102,11 +96,7 @@ fn finish_writes_the_rest_of_a_run_in_one_commit_or_nothing() {
     let before = notes();
     let refused = run
         .finish()
-        .declare(
-            Some(vec![key("fmt")]),
-            std::collections::BTreeMap::default(),
-            None,
-        )
+        .declare(Declaration::keys(vec![key("fmt")]))
         .results([(key("fmt"), pass(1.0)), (key("clippy"), pass(2.0))])
         .end(End::Complete);
     assert!(refused.is_err(), "clippy was never declared");
@@ -120,11 +110,7 @@ fn finish_writes_the_rest_of_a_run_in_one_commit_or_nothing() {
     resumed
         .run
         .finish()
-        .declare(
-            Some(vec![key("fmt"), key("clippy")]),
-            std::collections::BTreeMap::default(),
-            None,
-        )
+        .declare(Declaration::keys(vec![key("fmt"), key("clippy")]))
         .results([(key("fmt"), pass(1.0)), (key("clippy"), pass(2.0))])
         .conditions(serde_json::json!({"tests_observed": 2}))
         .end(End::Complete)
@@ -157,10 +143,9 @@ fn a_closed_run_cannot_be_resumed_and_an_unknown_one_is_named() {
         )
         .expect("open");
     let id = run.id().clone();
-    run.result(&key("parse_large"), p99(1.0), None)
-        .expect("result");
-    let end = End::Refused(Reason::new("interrupted", Some("SIGTERM after 30 s")));
-    run.close(end.clone(), None).expect("close");
+    run.result(&key("parse_large"), p99(1.0)).expect("result");
+    let end = End::Refused(Reason::new("interrupted").detail("SIGTERM after 30 s"));
+    run.close(end.clone()).expect("close");
     // The end reads back whole, its detail with it.
     let shown = evidence.at(|at| at.run(&id)).expect("show");
     assert_eq!(shown.end, Some(end));
@@ -284,14 +269,10 @@ fn a_returned_run_is_a_whole_recordable_run_after_every_write_and_never_in_this_
     let id = run.id().clone();
     let begun = read();
     assert_eq!(begun.len(), 1, "the open is returned before any work");
-    run.declare(
-        Some(vec![key("parse_large")]),
-        std::collections::BTreeMap::default(),
-        None,
-    )
-    .expect("declare");
+    run.declare(Declaration::keys(vec![key("parse_large")]))
+        .expect("declare");
     let before = read();
-    let refused = run.result(&key("additive"), p99(1.0), None);
+    let refused = run.result(&key("additive"), p99(1.0));
     assert!(refused.is_err(), "additive was never declared");
     assert_eq!(read(), before, "a refused write leaves the file whole");
     run.finish()

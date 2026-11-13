@@ -50,6 +50,7 @@ impl ToSql for LandingNumber {
 
 /// One commit on the trunk, whether or not anything was recorded on its tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct Landing {
     /// Its position on the trunk: `0` is the oldest landing.
     #[serde(rename = "landing")]

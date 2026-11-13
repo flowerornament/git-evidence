@@ -36,13 +36,10 @@ fn date(text: &str) -> UtcDate {
 }
 
 fn range(f: &Fixture, after: usize, through: usize) -> Selector {
-    Selector {
-        range: Some(LandingRange {
-            after: f.landings[after].clone(),
-            through: f.landings[through].clone(),
-        }),
-        ..Selector::default()
-    }
+    Selector::default().range(LandingRange {
+        after: f.landings[after].clone(),
+        through: f.landings[through].clone(),
+    })
 }
 
 fn log(f: &Fixture, selector: &Selector) -> Vec<LogEntry> {
@@ -58,12 +55,11 @@ fn listed(entries: &[LogEntry]) -> BTreeSet<u32> {
 }
 
 fn trend(f: &Fixture, landings: Selector) -> Vec<Point> {
-    let query = TrendQuery {
-        metric: "block.p99_ns".parse().expect("name"),
-        key: "parse".parse().expect("name"),
-        machine: None,
-        landings,
-    };
+    let query = TrendQuery::new(
+        "block.p99_ns".parse().expect("name"),
+        "parse".parse().expect("name"),
+    )
+    .landings(landings);
     ask(f, |at| at.trend(&query))
 }
 
@@ -74,10 +70,10 @@ fn points(points: &[Point]) -> BTreeSet<u32> {
 #[test]
 fn since_and_until_select_exactly_the_landings_dated_inside() {
     let f = store();
-    let window = |since: Option<&str>, until: Option<&str>| Selector {
-        since: since.map(date),
-        until: until.map(date),
-        ..Selector::default()
+    let window = |since: Option<&str>, until: Option<&str>| {
+        let mut selector = Selector::default();
+        (selector.since, selector.until) = (since.map(date), until.map(date));
+        selector
     };
     // Whole days: the until day is included.
     let days = log(&f, &window(Some("2026-10-02"), Some("2026-10-04")));
@@ -89,13 +85,11 @@ fn since_and_until_select_exactly_the_landings_dated_inside() {
     );
     assert_eq!(listed(&seconds), BTreeSet::from([2, 3]));
     // --last narrows what the window leaves.
-    let last = log(
-        &f,
-        &Selector {
-            last: std::num::NonZeroU32::new(2),
-            ..window(Some("2026-10-02"), Some("2026-10-05"))
-        },
-    );
+    let last = log(&f, &{
+        let mut q = window(Some("2026-10-02"), Some("2026-10-05"));
+        q.last = std::num::NonZeroU32::new(2);
+        q
+    });
     assert_eq!(listed(&last), BTreeSet::from([3, 4]));
     assert_eq!(
         points(&trend(&f, window(Some("2026-10-05"), None))),
@@ -124,22 +118,16 @@ fn a_range_end_off_the_trunk_is_named_and_an_empty_window_is_empty() {
             "candidate",
         )
         .expect("commit");
-    let off_trunk = Selector {
-        range: Some(LandingRange {
-            after: f.landings[0].clone(),
-            through: candidate,
-        }),
-        ..Selector::default()
-    };
+    let off_trunk = Selector::default().range(LandingRange {
+        after: f.landings[0].clone(),
+        through: candidate,
+    });
     let missing = not_recorded(&f, |at| at.log(&LogQuery::Landings(off_trunk.clone())));
     assert!(
         matches!(missing, NotRecorded::NotALanding(_)),
         "{missing:?}"
     );
-    let future = Selector {
-        since: Some(date("2027-01-01")),
-        ..Selector::default()
-    };
+    let future = Selector::default().since(date("2027-01-01"));
     assert_eq!(log(&f, &future), Vec::new());
 }
 
@@ -179,10 +167,7 @@ fn the_command_line_takes_the_grammar_on_trend_and_log() {
         cli(&f, &["--csv", "trend", "block.p99_ns", "parse", &a_b]),
         csv_of(&trend(&f, range(&f, 0, 3)))
     );
-    let dated = Selector {
-        since: Some(date("2026-10-04")),
-        ..Selector::default()
-    };
+    let dated = Selector::default().since(date("2026-10-04"));
     assert_eq!(
         cli(&f, &["--csv", "log", "--since", "2026-10-04"]),
         csv_of(&log(&f, &dated))
@@ -238,15 +223,15 @@ fn last_counts_from_one() {
     f.git
         .run(&["config", "evidence.horizon", "1"], None)
         .expect("config");
-    let query = TrendQuery {
-        metric: "block.p99_ns".parse().expect("metric"),
-        key: "parse".parse().expect("key"),
-        machine: None,
-        landings: Selector {
-            last: TrendQuery::DEFAULT_LAST.into(),
-            ..Selector::default()
-        },
-    };
+    let query = TrendQuery::new(
+        "block.p99_ns".parse().expect("metric"),
+        "parse".parse().expect("key"),
+    )
+    .landings({
+        let mut q = Selector::default();
+        q.last = TrendQuery::DEFAULT_LAST.into();
+        q
+    });
     assert_eq!(
         cli(&f, &["--csv", "trend", "block.p99_ns", "parse"]),
         csv_of(&ask(&f, |at| at.trend(&query)))

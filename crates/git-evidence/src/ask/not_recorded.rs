@@ -8,6 +8,7 @@ use crate::format::id::{CommitId, RunId, TreeId};
 /// A name the store has nothing recorded for, with the nearest recorded names
 /// (at most three, nearest first; empty when nothing of the sort is recorded).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
 pub enum NotRecorded {
     /// No run records this key.
     #[error(

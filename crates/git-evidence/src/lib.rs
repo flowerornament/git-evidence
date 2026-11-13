@@ -47,8 +47,8 @@ pub use bench::{
 };
 pub use evidence::{At, Error, Evidence};
 pub use format::event::{
-    Build, Direction, ENVELOPE_VERSION, End, Environment, Event, EventLine, Measure, Metric,
-    NotFinite, Open, Outcome, Producer, Profile, Reason, Suite, Timestamp, Try, Verdict,
+    Build, Declaration, Direction, ENVELOPE_VERSION, End, Environment, Event, EventLine, Measure,
+    Metric, NotFinite, Open, Outcome, Producer, Profile, Reason, Suite, Timestamp, Try, Verdict,
     VerdictStatus,
 };
 pub use format::fold::{Problem, Violation};

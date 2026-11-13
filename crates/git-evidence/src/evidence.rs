@@ -46,6 +46,7 @@ use std::path::Path;
 /// What can go wrong using [`Evidence`]. A refusal is [`RecordError::Refused`],
 /// naming the rule and its remedy.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
     #[error(transparent)]
     Store(#[from] StoreError),

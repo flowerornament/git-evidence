@@ -21,6 +21,7 @@ use std::path::{Path, PathBuf};
 
 /// A store-level failure.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum StoreError {
     #[error("no Git store found from {0}: run inside a Git or jj repository")]
     NotFound(PathBuf),

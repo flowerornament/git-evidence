@@ -8,14 +8,12 @@
 
 use git_evidence::At;
 use git_evidence::Recorded;
-use git_evidence::{
-    Build, Direction, ENVELOPE_VERSION, End, Environment, Event, EventLine, Measure, Metric, Open,
-    Outcome, Producer, Reason, Suite,
-};
 use git_evidence::{CommitId, Key, Kind, MetricName, ProducerName, RunId, TreeId};
+use git_evidence::{
+    Direction, End, Event, EventLine, Machine, Measure, Metric, Open, Outcome, Reason,
+};
 use git_evidence::{Error, Evidence};
 use git_process::TreeEntry;
-use std::collections::BTreeMap;
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -265,12 +263,10 @@ pub fn perf() -> Kind {
 
 /// A measured outcome of one metric.
 pub fn measured(metric: &str, value: f64) -> Outcome {
-    Outcome::Measured(vec![Measure {
-        metric: MetricName::parse(metric).expect("metric"),
-        value,
-        n: Some(20),
-        mad: Some(1.0),
-    }])
+    let mut measure =
+        Measure::new(MetricName::parse(metric).expect("metric"), value).expect("finite");
+    (measure.n, measure.mad) = (Some(20), Some(1.0));
+    Outcome::Measured(vec![measure])
 }
 
 pub fn p99(value: f64) -> Outcome {
@@ -278,7 +274,7 @@ pub fn p99(value: f64) -> Outcome {
 }
 
 pub fn refused(reason: &str) -> Outcome {
-    Outcome::Refused(Reason::new(reason, None))
+    Outcome::Refused(Reason::new(reason))
 }
 
 /// What a run declares about itself.
@@ -314,10 +310,7 @@ pub fn declaring(mut open: Open, shape: &Shape, results: &[(&str, Outcome)]) -> 
                 open.suite
                     .metrics
                     .entry(measure.metric.clone())
-                    .or_insert_with(|| Metric {
-                        unit: shape.unit.into(),
-                        better: shape.better,
-                    });
+                    .or_insert_with(|| Metric::new(shape.unit, shape.better));
             }
         }
     }
@@ -325,29 +318,21 @@ pub fn declaring(mut open: Open, shape: &Shape, results: &[(&str, Outcome)]) -> 
 }
 
 pub fn open(commit: &CommitId, shape: &Shape, keys: &[&str]) -> Open {
-    Open {
-        commit: commit.clone(),
-        producer: Producer {
-            name: ProducerName::parse(shape.producer).expect("producer"),
-            version: None,
-        },
-        suite: Suite {
-            harness: shape.harness.into(),
-            ..Suite::default()
-        },
-        environment: Environment {
-            machine: shape.machine.into(),
-            params: shape
-                .params
-                .iter()
-                .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-                .collect(),
-            descriptor: BTreeMap::new(),
-        },
-        build: Build::default(),
-        keys: Some(keys.iter().map(|k| key(k)).collect()),
-        source: None,
-    }
+    let mut open = Open::new(
+        commit.clone(),
+        ProducerName::parse(shape.producer).expect("producer"),
+        shape.harness,
+        &Machine::parse("bench").expect("machine"),
+    );
+    // As written, so a test can name no machine, which `Machine` refuses.
+    shape.machine.clone_into(&mut open.environment.machine);
+    open.environment.params = shape
+        .params
+        .iter()
+        .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+        .collect();
+    open.keys = Some(keys.iter().map(|k| key(k)).collect());
+    open
 }
 
 static CLOCK: AtomicU64 = AtomicU64::new(0);
@@ -358,6 +343,13 @@ pub fn tick() -> String {
     git_process::Timestamp::from_unix_millis(1_790_000_000_000 + u128::from(n) * 1000).into()
 }
 
+/// The line at `seq` of `run`, at the next [`tick`].
+pub fn event_line(run: &RunId, seq: u32, event: Event) -> EventLine {
+    let mut line = EventLine::new(run.clone(), seq, git_process::Timestamp::now(), event);
+    line.time = tick();
+    line
+}
+
 /// The lines of a run: open, the results, and an end unless `end` is `None`.
 /// Every metric `results` measure that `open` does not declare is declared in
 /// the default shape's unit and direction.
@@ -366,29 +358,16 @@ pub fn run_lines(open: Open, results: &[(&str, Outcome)], end: Option<End>) -> V
     let run = RunId::new();
     let mut seq = 0;
     let mut line = |event: Event| {
-        let line = EventLine {
-            v: ENVELOPE_VERSION,
-            run: run.clone(),
-            seq,
-            time: tick(),
-            event,
-        };
+        let line = event_line(&run, seq, event);
         seq += 1;
         line
     };
     let mut lines = vec![line(Event::Open(Box::new(open)))];
     for (name, outcome) in results {
-        lines.push(line(Event::Result {
-            key: key(name),
-            outcome: outcome.clone(),
-            location: None,
-        }));
+        lines.push(line(Event::result(key(name), outcome.clone())));
     }
     if let Some(end) = end {
-        lines.push(line(Event::Close {
-            end,
-            conditions: None,
-        }));
+        lines.push(line(Event::close(end)));
     }
     lines
 }
@@ -498,17 +477,17 @@ pub fn newest(n: u32) -> git_evidence::Selector {
 /// The trend of `parse_large`'s `block.p99_ns` over the newest `last`
 /// landings.
 pub fn parse_large_trend(last: i64) -> git_evidence::TrendQuery {
-    git_evidence::TrendQuery {
-        metric: "block.p99_ns".parse().expect("name"),
-        key: "parse_large".parse().expect("name"),
-        machine: None,
-        landings: newest(u32::try_from(last).expect("a landing count")),
-    }
+    let mut query = git_evidence::TrendQuery::new(
+        "block.p99_ns".parse().expect("name"),
+        "parse_large".parse().expect("name"),
+    );
+    query.landings = newest(u32::try_from(last).expect("a landing count"));
+    query
 }
 
 /// A run's end when its producer stopped before answering every key.
 pub fn interrupted() -> End {
-    End::Refused(git_evidence::Reason::new("interrupted", None))
+    End::Refused(git_evidence::Reason::new("interrupted"))
 }
 
 /// One perf run on `landing`: `parse_large` measured at `value`, `swap`

@@ -14,7 +14,7 @@ fn git() -> std::process::Command {
     git_process::testing::hermetic(&mut command);
     command
 }
-use git_evidence::{Direction, End, Measure, Metric, MetricName, Open, Outcome};
+use git_evidence::{End, Measure, Metric, MetricName, Open, Outcome};
 
 #[test]
 fn a_child_started_by_scratch_reads_the_scratch_store_and_nothing_else() {
@@ -31,21 +31,16 @@ fn a_child_started_by_scratch_reads_the_scratch_store_and_nothing_else() {
         &evidence.machine().expect("machine"),
     );
     open.keys = Some(vec!["parse_large".parse().expect("key")]);
-    open.suite.metrics.insert(
-        metric.clone(),
-        Metric {
-            unit: "ns".into(),
-            better: Some(Direction::Lower),
-        },
-    );
+    open.suite
+        .metrics
+        .insert(metric.clone(), Metric::lower("ns"));
     let mut run = evidence.run(&kind("perf"), open).expect("open");
     run.result(
         &"parse_large".parse().expect("key"),
         Outcome::Measured(vec![Measure::new(metric, 5.0).expect("finite")]),
-        None,
     )
     .expect("result");
-    run.close(End::Complete, None).expect("close");
+    run.close(End::Complete).expect("close");
     let output = scratch
         .command(env!("CARGO_BIN_EXE_git-evidence"))
         .args([
@@ -86,13 +81,12 @@ fn a_store_without_a_trunk_still_records() {
         &evidence.machine().expect("machine"),
     );
     open.keys = Some(Vec::new());
-    let line = git_evidence::EventLine {
-        v: git_evidence::ENVELOPE_VERSION,
-        run: git_evidence::RunId::new(),
-        seq: 0,
-        time: git_process::Timestamp::now().into(),
-        event: git_evidence::Event::Open(Box::new(open)),
-    };
+    let line = git_evidence::EventLine::new(
+        git_evidence::RunId::new(),
+        0,
+        git_process::Timestamp::now(),
+        git_evidence::Event::Open(Box::new(open)),
+    );
     let recorded = evidence
         .record(&kind("perf"), &[line])
         .expect("record without a trunk");
@@ -113,13 +107,12 @@ fn recording_and_resuming_never_query_a_trunk() {
             &"laptop".parse().expect("machine"),
         );
         open.keys = Some(Vec::new());
-        let mut line = git_evidence::EventLine {
-            v: git_evidence::ENVELOPE_VERSION,
-            run: git_evidence::RunId::new(),
-            seq: 0,
-            time: git_process::Timestamp::now().into(),
-            event: git_evidence::Event::Open(Box::new(open)),
-        };
+        let mut line = git_evidence::EventLine::new(
+            git_evidence::RunId::new(),
+            0,
+            git_process::Timestamp::now(),
+            git_evidence::Event::Open(Box::new(open)),
+        );
         let kind = kind("perf");
         evidence
             .record_dry_run(&kind, std::slice::from_ref(&line))
@@ -131,10 +124,7 @@ fn recording_and_resuming_never_query_a_trunk() {
             .resume(&kind, &line.run)
             .expect("resume without history");
         line.seq = 1;
-        line.event = git_evidence::Event::Close {
-            end: End::Complete,
-            conditions: None,
-        };
+        line.event = git_evidence::Event::close(End::Complete);
         evidence.record(&kind, &[line]).expect("close");
         return;
     }
@@ -262,18 +252,13 @@ fn a_misspelt_derived_metric_is_an_unknown_name() {
     let pass = git_evidence::VerdictStatus::Pass;
     run.result(
         &"fmt".parse().expect("key"),
-        Outcome::Verdict(git_evidence::Verdict {
-            status: pass,
-            tries: vec![git_evidence::Try {
-                status: pass,
-                duration_ms: Some(1.0),
-                cpu_ms: None,
-            }],
-        }),
-        None,
+        Outcome::Verdict(git_evidence::Verdict::new(
+            pass,
+            vec![git_evidence::Try::new(pass).duration_ms(1.0)],
+        )),
     )
     .expect("result");
-    run.close(End::Complete, None).expect("close");
+    run.close(End::Complete).expect("close");
     let asked = |metric: &str| {
         evidence.at(|at| {
             at.trend(&git_evidence::TrendQuery::new(

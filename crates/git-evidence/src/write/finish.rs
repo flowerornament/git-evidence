@@ -3,10 +3,9 @@
 use super::batch::record_dry_run;
 use super::{RecordError, Recorded, Run};
 use crate::format::event::{
-    Build, ENVELOPE_VERSION, End, Event, EventLine, Metric, Outcome, Timestamp,
+    Declaration, ENVELOPE_VERSION, End, Event, EventLine, Outcome, Timestamp,
 };
-use crate::format::id::{Key, MetricName};
-use std::collections::BTreeMap;
+use crate::format::id::Key;
 
 /// The remaining events of a run, gathered for one all-or-nothing commit.
 #[derive(Debug)]
@@ -21,17 +20,8 @@ impl Finish {
     /// The run's one late declaration: keys, metrics and what was built.
     /// It must come before any result of the run, streamed or finished; a
     /// declaration after a result is refused when the run is written.
-    pub fn declare(
-        mut self,
-        keys: Option<Vec<Key>>,
-        metrics: BTreeMap<MetricName, Metric>,
-        build: Option<Build>,
-    ) -> Self {
-        self.events.push(Event::Declare {
-            keys,
-            metrics,
-            build,
-        });
+    pub fn declare(mut self, declaration: Declaration) -> Self {
+        self.events.push(declaration.into());
         self
     }
 
@@ -43,6 +33,12 @@ impl Finish {
                 outcome,
                 location: None,
             }));
+        self
+    }
+
+    /// One outcome with the code site that produced it.
+    pub fn result_at(mut self, key: Key, outcome: Outcome, location: impl Into<String>) -> Self {
+        self.events.push(Event::result_at(key, outcome, location));
         self
     }
 

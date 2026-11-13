@@ -28,6 +28,7 @@ use std::collections::BTreeMap;
 
 /// A push or fetch that could not run.
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum RemoteError {
     #[error(transparent)]
     Store(#[from] StoreError),
@@ -70,6 +71,7 @@ pub enum RemoteError {
 /// What happened to one ref.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum UpdateKind {
     Created,
     Updated,
@@ -80,6 +82,7 @@ pub enum UpdateKind {
 
 /// One ref's outcome.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct RefUpdate {
     pub reference: String,
     pub change: UpdateKind,
@@ -87,6 +90,7 @@ pub struct RefUpdate {
 
 /// What a push or fetch did, ref by ref.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[non_exhaustive]
 pub struct Transfer {
     pub remote: String,
     pub refs: Vec<RefUpdate>,
@@ -535,6 +539,22 @@ impl TidyRows for Transfer {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_manual_documents_the_transfer_header() {
+        let readme = include_str!("../../README.md");
+        let row = readme
+            .lines()
+            .find(|l| l.starts_with("| `fetch`, `push`"))
+            .expect("the Output table has a fetch and push row");
+        let documented = row.split('|').nth(2).expect("a header cell").trim();
+        let transfer = Transfer {
+            remote: "origin".to_owned(),
+            refs: Vec::new(),
+            merged: Vec::new(),
+        };
+        assert_eq!(documented, format!("`{}`", transfer.header().join(",")));
+    }
 
     #[test]
     fn porcelain_lines_parse_into_changes() {

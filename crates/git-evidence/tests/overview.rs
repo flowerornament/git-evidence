@@ -7,14 +7,7 @@ use git_evidence::{End, Outcome, Try, Verdict, VerdictStatus};
 use git_evidence::{RunCount, TidyRows};
 
 fn verdict(status: VerdictStatus) -> Outcome {
-    Outcome::Verdict(Verdict {
-        status,
-        tries: vec![Try {
-            status,
-            duration_ms: None,
-            cpu_ms: None,
-        }],
-    })
+    Outcome::Verdict(Verdict::new(status, vec![Try::new(status)]))
 }
 
 #[test]
@@ -52,7 +45,7 @@ fn the_overview_counts_each_landings_runs_newest_first() {
                 0,
                 &Shape::default(),
                 &[("chain", refused("noisy_host"))],
-                Some(End::Refused(git_evidence::Reason::new("noisy_host", None))),
+                Some(End::Refused(git_evidence::Reason::new("noisy_host"))),
             ),
         )
         .expect("setup");
@@ -66,19 +59,13 @@ fn the_overview_counts_each_landings_runs_newest_first() {
         .map(|l| l.landing.number.get())
         .collect();
     assert_eq!(positions, vec![0, 1, 2], "oldest first, as log and trend");
-    let one = RunCount {
-        runs: 1,
-        refused: 0,
+    let counts = |landing: usize, kind: &str| {
+        let count: &RunCount = &overview.landings[landing].runs[kind];
+        (count.runs, count.refused)
     };
-    assert_eq!(overview.landings[2].runs["gates"], one);
-    assert_eq!(overview.landings[1].runs["gates"], one);
-    assert_eq!(
-        overview.landings[0].runs["perf"],
-        RunCount {
-            runs: 2,
-            refused: 1
-        }
-    );
+    assert_eq!(counts(2, "gates"), (1, 0));
+    assert_eq!(counts(1, "gates"), (1, 0));
+    assert_eq!(counts(0, "perf"), (2, 1));
     assert_eq!(
         overview.header().join(","),
         "landing,commit,date,gates,perf,perf_refused,subject"
