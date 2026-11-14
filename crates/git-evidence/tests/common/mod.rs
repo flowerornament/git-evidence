@@ -394,7 +394,7 @@ pub fn tree(f: &Fixture, commit: &CommitId) -> TreeId {
 /// Every run on every landing, as `log` lists them: what an incremental
 /// catch-up and a rebuild must both answer.
 pub fn every_run(at: &At<'_>) -> Result<Vec<git_evidence::LogEntry>, Error> {
-    at.log(&git_evidence::LogQuery::Landings(
+    at.log(&git_evidence::LogQuery::landings(
         git_evidence::Selector::default(),
     ))
 }

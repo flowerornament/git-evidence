@@ -4,7 +4,7 @@
 
 use super::NotRecorded;
 use super::params_of::params_of;
-use super::suggest::nearest;
+use super::suggest::{nearest, unknown_key_glob};
 use crate::format::event::{Direction, End, Open, Reason, Timestamp, VerdictStatus};
 use crate::format::id::{Key, Kind, Machine, MetricName, RunId, Sha256, TreeId};
 use crate::index::{
@@ -126,19 +126,17 @@ pub struct ShowQuery {
 impl ShowQuery {
     /// The whole of one run: every key and metric.
     #[must_use]
-    pub fn of(run: &RunId) -> Self {
-        Self::new(Shown::Run(run.clone()))
+    pub fn run(run: &RunId) -> Self {
+        Self::of(Shown::Run(run.clone()))
     }
 
     /// Every run on `tree`, every key and metric.
     #[must_use]
     pub fn tree(tree: &TreeId) -> Self {
-        Self::new(Shown::Tree(tree.clone()))
+        Self::of(Shown::Tree(tree.clone()))
     }
 
-    /// Every key and metric of what `shown` names; narrow it through the fields.
-    #[must_use]
-    pub const fn new(shown: Shown) -> Self {
+    const fn of(shown: Shown) -> Self {
         Self {
             shown,
             kind: None,
@@ -399,16 +397,9 @@ fn unknown_glob(db: &Connection, query: &ShowQuery) -> Result<Option<NotRecorded
             .map(|any| !any)
     };
     if let Some(glob) = &query.key
-        && nowhere(
-            "SELECT EXISTS (SELECT 1 FROM results WHERE key GLOB ?1)",
-            glob,
-        )?
+        && let Some(unknown) = unknown_key_glob(db, glob)?
     {
-        let names = column_values_with(db, "SELECT DISTINCT key FROM results", [])?;
-        return Ok(Some(NotRecorded::Key {
-            key: glob.clone(),
-            nearest: nearest(glob, &names),
-        }));
+        return Ok(Some(unknown));
     }
     if let Some(glob) = &query.metric
         && nowhere(

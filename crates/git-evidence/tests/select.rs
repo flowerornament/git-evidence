@@ -43,7 +43,7 @@ fn range(f: &Fixture, after: usize, through: usize) -> Selector {
 }
 
 fn log(f: &Fixture, selector: &Selector) -> Vec<LogEntry> {
-    ask(f, |at| at.log(&LogQuery::Landings(selector.clone())))
+    ask(f, |at| at.log(&LogQuery::landings(selector.clone())))
 }
 
 /// The landings a log lists.
@@ -122,7 +122,7 @@ fn a_range_end_off_the_trunk_is_named_and_an_empty_window_is_empty() {
         after: f.landings[0].clone(),
         through: candidate,
     });
-    let missing = not_recorded(&f, |at| at.log(&LogQuery::Landings(off_trunk.clone())));
+    let missing = not_recorded(&f, |at| at.log(&LogQuery::landings(off_trunk.clone())));
     assert!(
         matches!(missing, NotRecorded::NotALanding(_)),
         "{missing:?}"
@@ -336,7 +336,7 @@ fn invalid_recorded_runs_are_no_runs_and_leave_the_landings_alone() {
         .at(|at| {
             Ok((
                 at.overview(one)?,
-                at.log(&LogQuery::Tree(tree.clone()))
+                at.log(&LogQuery::tree(&tree.clone()))
                     .map_err(|e| e.to_string()),
             ))
         })

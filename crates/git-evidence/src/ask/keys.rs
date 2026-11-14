@@ -37,13 +37,13 @@ pub struct RecordedMetric {
     pub direction: Option<Direction>,
 }
 
-/// What `keys` asks: every key with evidence, or only those of one kind, or
-/// only metrics matching a glob.
+/// What `keys` asks: every key with evidence, narrowed by globs over the
+/// run's kind and the metric.
 #[derive(Debug, Clone, Default)]
 #[non_exhaustive]
 pub struct KeysQuery {
-    pub kind: Option<Kind>,
-    /// A glob over metric names (`block.*`).
+    /// Globs (`SQLite` GLOB) over each run's kind and each metric's name.
+    pub kind: Option<String>,
     pub metric: Option<String>,
 }
 
@@ -54,14 +54,16 @@ impl KeysQuery {
         Self::default()
     }
 
-    /// Only the keys of `kind`.
+    /// Only the keys of runs whose kind is matching the glob `kind` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
-    pub fn kind(mut self, kind: Kind) -> Self {
-        self.kind = Some(kind);
+    pub fn kind(mut self, kind: impl Into<String>) -> Self {
+        self.kind = Some(kind.into());
         self
     }
 
-    /// Only the metrics matching the glob `metric`.
+    /// Only the metrics whose name is matching the glob `metric` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
     pub fn metric(mut self, metric: impl Into<String>) -> Self {
         self.metric = Some(metric.into());
@@ -72,19 +74,19 @@ impl KeysQuery {
 /// `git evidence keys`: the keys and metrics that have evidence.
 ///
 /// # Errors
-/// [`NotRecorded::Kind`] for a kind with no run, [`NotRecorded::MetricGlob`]
+/// [`NotRecorded::Kind`] for a kind glob no run matches, [`NotRecorded::MetricGlob`]
 /// when no recorded metric matches the glob; an index failure.
 pub(crate) fn keys(db: &Connection, query: &KeysQuery) -> Result<Vec<KeyInfo>, crate::Error> {
-    let (kind, metric) = (query.kind.as_ref(), query.metric.as_deref());
+    let (kind, metric) = (query.kind.as_deref(), query.metric.as_deref());
     let mut metrics: std::collections::HashMap<(String, String), Vec<RecordedMetric>> =
         std::collections::HashMap::new();
     let mut statement = db.prepare(
         "SELECT DISTINCT r.kind, m.key, m.metric, m.unit, m.better
          FROM all_measures m JOIN counted_runs r ON r.run = m.run
-         WHERE (?1 IS NULL OR r.kind = ?1) AND (?2 IS NULL OR m.metric GLOB ?2)
+         WHERE (?1 IS NULL OR r.kind GLOB ?1) AND (?2 IS NULL OR m.metric GLOB ?2)
          ORDER BY m.metric, m.unit, m.better",
     )?;
-    let recorded = statement.query_map(params![kind.map(Kind::as_str), metric], |row| {
+    let recorded = statement.query_map(params![kind, metric], |row| {
         Ok((
             (row.get::<_, String>(0)?, row.get::<_, String>(1)?),
             RecordedMetric {
@@ -105,10 +107,10 @@ pub(crate) fn keys(db: &Connection, query: &KeysQuery) -> Result<Vec<KeyInfo>, c
         .prepare(
             "SELECT r.kind, k.key, COUNT(DISTINCT r.run)
              FROM run_keys k JOIN counted_runs r ON r.run = k.run
-             WHERE (?1 IS NULL OR r.kind = ?1)
+             WHERE (?1 IS NULL OR r.kind GLOB ?1)
              GROUP BY r.kind, k.key ORDER BY r.kind, k.key",
         )?
-        .query_map(params![kind.map(Kind::as_str)], |row| {
+        .query_map(params![kind], |row| {
             let (kind, key): (String, String) = (row.get(0)?, row.get(1)?);
             Ok(KeyInfo {
                 kind: parsed(0, Kind::parse(&kind))?,
@@ -123,12 +125,17 @@ pub(crate) fn keys(db: &Connection, query: &KeysQuery) -> Result<Vec<KeyInfo>, c
         .into_iter()
         .filter(|info| metric.is_none() || !info.metrics.is_empty())
         .collect();
-    if let (true, Some(kind)) = (rows.is_empty(), kind) {
-        let kinds = column_values(db, "SELECT DISTINCT kind FROM counted_runs ORDER BY kind")?;
-        if !kinds.iter().any(|k| k == kind.as_str()) {
+    if let (true, Some(glob)) = (rows.is_empty(), kind) {
+        let matched: bool = db.query_row(
+            "SELECT EXISTS (SELECT 1 FROM counted_runs WHERE kind GLOB ?1)",
+            [glob],
+            |r| r.get(0),
+        )?;
+        if !matched {
+            let kinds = column_values(db, "SELECT DISTINCT kind FROM counted_runs ORDER BY kind")?;
             return Err(NotRecorded::Kind {
-                kind: kind.to_string(),
-                nearest: nearest(kind.as_str(), &kinds),
+                kind: glob.to_owned(),
+                nearest: nearest(glob, &kinds),
             }
             .into());
         }

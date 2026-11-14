@@ -32,10 +32,9 @@ pub struct LogEntry {
     pub outcomes: BTreeMap<String, i64>,
 }
 
-/// What `log` asks.
-#[derive(Debug, Clone)]
-#[non_exhaustive]
-pub enum LogQuery {
+/// What `log` names: one tree, or the selected landings.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Logged {
     /// `git evidence log REV`: every run on this tree.
     Tree(TreeId),
     /// `git evidence log A..B` (or `--since`, `--until`, `--last`): every
@@ -44,13 +43,39 @@ pub enum LogQuery {
     Landings(Selector),
 }
 
+/// What `log` asks: the runs on a tree or on the selected landings. A struct,
+/// so that a filter can join it later without a breaking change.
+#[derive(Debug, Clone)]
+#[non_exhaustive]
+pub struct LogQuery {
+    pub logged: Logged,
+}
+
+impl LogQuery {
+    /// Every run on `tree`.
+    #[must_use]
+    pub fn tree(tree: &TreeId) -> Self {
+        Self {
+            logged: Logged::Tree(tree.clone()),
+        }
+    }
+
+    /// Every run on each landing `landings` selects.
+    #[must_use]
+    pub const fn landings(landings: Selector) -> Self {
+        Self {
+            logged: Logged::Landings(landings),
+        }
+    }
+}
+
 /// `git evidence log`.
 ///
 /// # Errors
 /// [`NotRecorded::Tree`] when a tree asked for has no run; an index failure.
 pub(crate) fn log(db: &Connection, query: &LogQuery) -> Result<Vec<LogEntry>, crate::Error> {
-    match query {
-        LogQuery::Tree(tree) => {
+    match &query.logged {
+        Logged::Tree(tree) => {
             let entries = log_entries(
                 db,
                 "SELECT r.run, r.kind, r.producer, r.machine, r.opened,
@@ -64,7 +89,7 @@ pub(crate) fn log(db: &Connection, query: &LogQuery) -> Result<Vec<LogEntry>, cr
             }
             Ok(entries)
         }
-        LogQuery::Landings(selector) => Ok(log_entries(
+        Logged::Landings(selector) => Ok(log_entries(
             db,
             "SELECT r.run, r.kind, r.producer, r.machine, r.opened,
                     l.landing, r.ended, r.reason, r.detail

@@ -34,7 +34,8 @@ pub struct Point {
 pub struct TrendQuery {
     pub metric: MetricName,
     pub key: Key,
-    pub machine: Option<Machine>,
+    /// A glob (`SQLite` GLOB) over each run's machine.
+    pub machine: Option<String>,
     /// The landings it spans.
     pub landings: Selector,
 }
@@ -55,10 +56,11 @@ impl TrendQuery {
         }
     }
 
-    /// Only the runs on `machine`.
+    /// Only the runs whose machine is matching the glob `machine` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
-    pub fn machine(mut self, machine: Machine) -> Self {
-        self.machine = Some(machine);
+    pub fn machine(mut self, machine: impl Into<String>) -> Self {
+        self.machine = Some(machine.into());
         self
     }
 
@@ -86,7 +88,7 @@ pub(crate) fn trend(db: &Connection, query: &TrendQuery) -> Result<Vec<Point>, c
          FROM trunk l
          JOIN counted_runs r ON r.tree = l.tree AND r.ended IS NOT NULL
          JOIN all_measures m ON m.run = r.run AND m.key = ?1 AND m.metric = ?2
-         WHERE l.landing IN (SELECT value FROM json_each(?3)) AND (?4 IS NULL OR r.machine = ?4)
+         WHERE l.landing IN (SELECT value FROM json_each(?3)) AND (?4 IS NULL OR r.machine GLOB ?4)
          ORDER BY l.landing, r.opened, r.run",
         crate::index::landing_date("l")
     ))?;

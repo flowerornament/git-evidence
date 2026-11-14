@@ -7,8 +7,8 @@
 //! the other side empty; one in another unit is another row, never converted.
 
 use super::NotRecorded;
-use super::suggest::{nearest, unknown_name};
-use crate::format::id::{Key, Kind, Machine, RunId, Sha256, TreeId};
+use super::suggest::{nearest, unknown_key_glob};
+use crate::format::id::{Kind, Machine, RunId, Sha256, TreeId};
 use crate::index::{IndexError, column_values, machine_at, parsed};
 use crate::rows::{TidyRows, cell, columns};
 use rusqlite::{Connection, params};
@@ -21,16 +21,17 @@ use std::collections::BTreeMap;
 pub struct DiffQuery {
     pub before: TreeId,
     pub after: TreeId,
-    pub kind: Option<Kind>,
-    pub key: Option<Key>,
-    /// A glob over metric names (`SQLite` GLOB): a pattern, not a name.
+    /// Globs (`SQLite` GLOB) over each run's kind and machine and each
+    /// number's key and metric.
+    pub kind: Option<String>,
+    pub key: Option<String>,
     pub metric: Option<String>,
-    pub machine: Option<Machine>,
+    pub machine: Option<String>,
 }
 
 impl DiffQuery {
     /// Every number that differs between `before` and `after`; narrow it
-    /// through the fields.
+    /// through its builders.
     #[must_use]
     pub const fn new(before: TreeId, after: TreeId) -> Self {
         Self {
@@ -43,31 +44,35 @@ impl DiffQuery {
         }
     }
 
-    /// Only the runs of `kind`.
+    /// Only the runs whose kind is matching the glob `kind` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
-    pub fn kind(mut self, kind: Kind) -> Self {
-        self.kind = Some(kind);
+    pub fn kind(mut self, kind: impl Into<String>) -> Self {
+        self.kind = Some(kind.into());
         self
     }
 
-    /// Only the numbers of `key`.
+    /// Only the numbers whose key is matching the glob `key` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
-    pub fn key(mut self, key: Key) -> Self {
-        self.key = Some(key);
+    pub fn key(mut self, key: impl Into<String>) -> Self {
+        self.key = Some(key.into());
         self
     }
 
-    /// Only the metrics matching the glob `metric`.
+    /// Only the numbers whose metric is matching the glob `metric` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
     pub fn metric(mut self, metric: impl Into<String>) -> Self {
         self.metric = Some(metric.into());
         self
     }
 
-    /// Only the runs on `machine`.
+    /// Only the runs whose machine is matching the glob `machine` (`SQLite` GLOB; a name
+    /// without `*`, `?` or `[` matches only itself).
     #[must_use]
-    pub fn machine(mut self, machine: Machine) -> Self {
-        self.machine = Some(machine);
+    pub fn machine(mut self, machine: impl Into<String>) -> Self {
+        self.machine = Some(machine.into());
         self
     }
 }
@@ -164,8 +169,8 @@ pub(crate) fn diff(db: &Connection, query: &DiffQuery) -> Result<Vec<Difference>
             return Err(NotRecorded::Tree(tree.clone()).into());
         }
     }
-    if let Some(key) = &query.key
-        && let Some(unknown @ NotRecorded::Key { .. }) = unknown_name(db, key.as_str(), "")?
+    if let Some(glob) = &query.key
+        && let Some(unknown) = unknown_key_glob(db, glob)?
     {
         return Err(unknown.into());
     }
@@ -226,8 +231,8 @@ fn newest_values(
                   ROW_NUMBER() OVER series AS newest, COUNT(*) OVER series AS runs
            FROM counted_runs r JOIN all_measures m ON m.run = r.run
            WHERE r.tree = ?1 AND r.ended = 'complete'
-             AND (?2 IS NULL OR r.kind = ?2) AND (?3 IS NULL OR m.key = ?3)
-             AND (?4 IS NULL OR m.metric GLOB ?4) AND (?5 IS NULL OR r.machine = ?5)
+             AND (?2 IS NULL OR r.kind GLOB ?2) AND (?3 IS NULL OR m.key GLOB ?3)
+             AND (?4 IS NULL OR m.metric GLOB ?4) AND (?5 IS NULL OR r.machine GLOB ?5)
            WINDOW series AS (PARTITION BY r.kind, r.variant, m.key, m.metric, m.unit
                              ORDER BY r.opened DESC, r.run DESC
                              ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING))
@@ -237,7 +242,7 @@ fn newest_values(
         .query_map(
             params![
                 tree.as_str(),
-                query.kind.as_ref().map(Kind::as_str),
+                query.kind,
                 query.key,
                 query.metric,
                 query.machine

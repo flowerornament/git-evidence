@@ -265,7 +265,7 @@ fn a_run_recorded_on_two_trees_is_excluded_from_both_whatever_the_fold_order() {
     assert!(
         trend
             .as_ref()
-            .is_err_and(|e| e.contains("no run records key")),
+            .is_err_and(|e| e.contains("no run records a key matching")),
         "neither copy is a value: {trend:?}"
     );
     let shown = not_recorded(&f, |at| at.run(&shared));

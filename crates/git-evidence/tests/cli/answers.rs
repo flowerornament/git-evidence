@@ -95,7 +95,7 @@ fn trend_is_the_api_rows(f: &Fixture) {
 
 fn log_is_the_api_rows_one_line_per_run(f: &Fixture) {
     let landing = tree(f, &f.landings[1]);
-    let runs = api(f, |at| at.log(&LogQuery::Tree(landing.clone())));
+    let runs = api(f, |at| at.log(&LogQuery::tree(&landing.clone())));
     assert_eq!(runs.len(), 2);
     prints(f, &["log", f.landings[1].as_str()], &runs);
     let text = String::from_utf8(cli(f, &["log", f.landings[1].as_str()]).stdout).expect("UTF-8");
@@ -177,7 +177,7 @@ fn a_name_nothing_records_exits_2_naming_it_on_standard_error(f: &Fixture) {
         ),
         (
             vec!["keys", "--kind", "nosuch"],
-            "no run of kind \"nosuch\"",
+            "no recorded run's kind matches \"nosuch\"",
         ),
         (
             vec!["log", f.landings[3].as_str()],
@@ -220,9 +220,7 @@ fn the_overview_without_a_trunk_could_not_run(f: &Fixture) {
 fn a_malformed_id_on_the_command_line_exits_1(f: &Fixture) {
     for args in [
         &["show", "not-a-ulid"][..],
-        &["keys", "--kind", "Not A Kind"],
         &["trend", "latency.p99_ns", "", "--last", "2"],
-        &["diff", "HEAD~1", "HEAD", "--machine", "two words"],
         &["nosuch", "HEAD~1", "HEAD"],
         &["--json", "keys"],
     ] {
@@ -230,6 +228,10 @@ fn a_malformed_id_on_the_command_line_exits_1(f: &Fixture) {
         assert_eq!(output.status.code(), Some(1), "{args:?}");
         assert!(output.stdout.is_empty(), "{args:?}: nothing is printed");
     }
+    // A flag that narrows takes a glob: one that matches no kind is a name
+    // nothing records (exit 2), never a malformed command.
+    let output = cli(f, &["keys", "--kind", "Not A Kind"]);
+    assert_eq!(output.status.code(), Some(2));
 }
 
 /// One owned history exercises every read-only command without rebuilding it.

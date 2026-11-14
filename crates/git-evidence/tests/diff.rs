@@ -303,15 +303,9 @@ fn filters_narrow_the_rows() {
     }
     let asked = |query: DiffQuery| ask(&f, |at| at.diff(&query)).len();
     assert_eq!(asked(between(&f, 0, 1)), 3);
-    assert_eq!(
-        asked(between(&f, 0, 1).machine("laptop".parse().expect("machine"))),
-        1
-    );
+    assert_eq!(asked(between(&f, 0, 1).machine("laptop")), 1);
     assert_eq!(asked(between(&f, 0, 1).metric("compile.*")), 1);
-    assert_eq!(
-        asked(between(&f, 0, 1).key("chain".parse().expect("key"))),
-        2
-    );
+    assert_eq!(asked(between(&f, 0, 1).key("chain")), 2);
     assert_eq!(asked(between(&f, 0, 1).kind(kind("gates"))), 0);
 }
 
@@ -330,9 +324,7 @@ fn a_tree_with_no_run_an_unknown_key_or_an_unmatched_glob_is_not_recorded() {
     }
     let empty = not_recorded(&f, |at| at.diff(&between(&f, 0, 2)));
     assert!(matches!(empty, NotRecorded::Tree(_)), "{empty:?}");
-    let key = not_recorded(&f, |at| {
-        at.diff(&between(&f, 0, 1).key("chian".parse().expect("key")))
-    });
+    let key = not_recorded(&f, |at| at.diff(&between(&f, 0, 1).key("chian")));
     assert!(matches!(key, NotRecorded::Key { .. }), "{key:?}");
     let glob = not_recorded(&f, |at| at.diff(&between(&f, 0, 1).metric("zzz*")));
     assert!(matches!(glob, NotRecorded::MetricGlob { .. }), "{glob:?}");

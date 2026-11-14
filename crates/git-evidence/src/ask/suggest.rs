@@ -8,6 +8,30 @@ use crate::index::IndexError;
 use crate::index::{column_values, column_values_with};
 use rusqlite::{Connection, params};
 
+/// `None` when some counted run records a key matching `glob`; else the
+/// refusal naming the recorded keys nearest to it.
+pub(super) fn unknown_key_glob(
+    db: &Connection,
+    glob: &str,
+) -> Result<Option<NotRecorded>, IndexError> {
+    let matched: bool = db.query_row(
+        "SELECT EXISTS (SELECT 1 FROM run_keys k JOIN counted_runs r ON r.run = k.run WHERE k.key GLOB ?1)",
+        [glob],
+        |r| r.get(0),
+    )?;
+    if matched {
+        return Ok(None);
+    }
+    let names = column_values(
+        db,
+        "SELECT DISTINCT k.key FROM run_keys k JOIN counted_runs r ON r.run = k.run",
+    )?;
+    Ok(Some(NotRecorded::Key {
+        key: glob.to_owned(),
+        nearest: nearest(glob, &names),
+    }))
+}
+
 /// [`NotRecorded::Key`] or [`NotRecorded::Metric`], with the nearest names,
 /// when nothing in the store has the key, or the key with the metric.
 pub(super) fn unknown_name(

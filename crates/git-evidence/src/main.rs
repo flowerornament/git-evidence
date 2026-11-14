@@ -24,9 +24,8 @@ use clap::Parser as _;
 use cli::args::{Cli, Verb};
 use cli::revision::{resolve_range, resolve_tree};
 use git_evidence::{
-    DiffQuery, End, Error, EventLine, Evidence, Key, KeysQuery, Kind, LogQuery, Machine,
-    MetricName, Reason, RecordError, RemoteError, RunId, Selector, ShowQuery, Shown, TidyRows,
-    TrendQuery,
+    DiffQuery, End, Error, EventLine, Evidence, Key, KeysQuery, Kind, LogQuery, MetricName, Reason,
+    RecordError, RemoteError, RunId, Selector, ShowQuery, Shown, TidyRows, TrendQuery,
 };
 use std::io::{Read as _, Write as _};
 use std::num::NonZeroU32;
@@ -171,7 +170,10 @@ fn ask(output: Output, evidence: &Evidence, verb: Verb) -> Result<u8, Box<dyn st
             key,
             metric,
         } => {
-            let mut query = ShowQuery::new(shown(evidence, &rev)?);
+            let mut query = match rev.parse::<RunId>() {
+                Ok(run) => ShowQuery::run(&run),
+                Err(_) => ShowQuery::tree(&resolve_tree(evidence, &rev)?),
+            };
             (query.kind, query.machine, query.key, query.metric) = (kind, machine, key, metric);
             show(output, evidence, &query)
         }
@@ -211,7 +213,7 @@ fn trend(
     evidence: &Evidence,
     metric: MetricName,
     key: Key,
-    machine: Option<Machine>,
+    machine: Option<String>,
     mut landings: Selector,
 ) -> Result<u8, Box<dyn std::error::Error>> {
     if landings.is_everything() {
@@ -220,14 +222,6 @@ fn trend(
     let mut query = TrendQuery::new(metric, key);
     (query.machine, query.landings) = (machine, landings);
     Ok(emit(output, &evidence.at(|at| at.trend(&query))?))
-}
-
-/// What `show REV|RUN` names: a run id is a run, anything else a revision.
-fn shown(evidence: &Evidence, rev: &str) -> Result<Shown, Box<dyn std::error::Error>> {
-    Ok(match rev.parse::<RunId>() {
-        Ok(run) => Shown::Run(run),
-        Err(_) => Shown::Tree(resolve_tree(evidence, rev)?),
-    })
 }
 
 /// `show RUN` prints the run with its parameters; `show REV` every run's
@@ -259,9 +253,9 @@ fn log(
                     "a revision names one tree; select landings with A..B, --last, --since or --until".into(),
                 );
             }
-            LogQuery::Tree(resolve_tree(evidence, &rev)?)
+            LogQuery::tree(&resolve_tree(evidence, &rev)?)
         }
-        range => LogQuery::Landings(selected(range.as_deref())?),
+        range => LogQuery::landings(selected(range.as_deref())?),
     };
     Ok(emit(output, &evidence.at(|at| at.log(&query))?))
 }

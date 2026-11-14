@@ -2,7 +2,7 @@
 //! prints them (README "Reading" and "Writing").
 
 use clap::{Args, Parser, Subcommand};
-use git_evidence::{Key, Kind, Machine, MetricName, UtcDate};
+use git_evidence::{Key, Kind, MetricName, UtcDate};
 
 #[derive(Parser)]
 #[command(
@@ -40,9 +40,9 @@ pub enum Verb {
         metric: MetricName,
         /// The key, e.g. parser/parse_large.
         key: Key,
-        /// Only this machine's runs.
-        #[arg(long)]
-        machine: Option<Machine>,
+        /// Only runs whose machine matches this glob.
+        #[arg(long, value_name = "GLOB")]
+        machine: Option<String>,
         /// A..B: the landings after A, through B. Without any selection: --last 30.
         range: Option<String>,
         #[command(flatten)]
@@ -62,15 +62,18 @@ pub enum Verb {
         a: String,
         /// The later revision.
         b: String,
-        #[arg(long)]
-        kind: Option<Kind>,
-        #[arg(long)]
-        key: Option<Key>,
-        /// A glob over metric names.
-        #[arg(long)]
+        /// Only runs whose kind matches this glob.
+        #[arg(long, value_name = "GLOB")]
+        kind: Option<String>,
+        /// Only keys matching this glob.
+        #[arg(long, value_name = "GLOB")]
+        key: Option<String>,
+        /// Only metrics matching this glob.
+        #[arg(long, value_name = "GLOB")]
         metric: Option<String>,
-        #[arg(long)]
-        machine: Option<Machine>,
+        /// Only runs whose machine matches this glob.
+        #[arg(long, value_name = "GLOB")]
+        machine: Option<String>,
     },
     /// One row per number or outcome recorded on a revision, or in one run.
     Show {
@@ -92,10 +95,11 @@ pub enum Verb {
     },
     /// The keys and metrics recorded, one row each.
     Keys {
-        #[arg(long)]
-        kind: Option<Kind>,
-        /// A glob over metric names.
-        #[arg(long)]
+        /// Only runs whose kind matches this glob.
+        #[arg(long, value_name = "GLOB")]
+        kind: Option<String>,
+        /// Only metrics matching this glob.
+        #[arg(long, value_name = "GLOB")]
         metric: Option<String>,
     },
     /// Run one read-only SQL query on the refreshed index; the rows as CSV.

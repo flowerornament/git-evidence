@@ -146,7 +146,7 @@ fn log_csv_names_each_run_landing(f: &Fixture) {
         f,
         "log",
         &["log", f.landings[1].as_str()],
-        &api(f, |at| at.log(&LogQuery::Tree(landing.clone()))),
+        &api(f, |at| at.log(&LogQuery::tree(&landing.clone()))),
     );
     let range = format!("{}..{}", f.landings[0], f.landings[2]);
     let output = cli(f, &["log", &range]);

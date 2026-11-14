@@ -29,7 +29,7 @@ pub(crate) use keys::keys;
 pub use keys::{KeyInfo, KeysQuery, RecordedMetric};
 pub use landings::{Landing, LandingNumber};
 pub(crate) use log::log;
-pub use log::{LogEntry, LogQuery};
+pub use log::{LogEntry, LogQuery, Logged};
 pub use not_recorded::NotRecorded;
 pub(crate) use overview::overview;
 pub use overview::{LandingSummary, Overview, RunCount};

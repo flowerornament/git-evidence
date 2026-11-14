@@ -29,8 +29,8 @@
 
 use crate::ask::sql::{Rows, SqlError};
 use crate::ask::{
-    self, DiffQuery, Difference, KeyInfo, KeysQuery, LogEntry, LogQuery, NotRecorded, Overview,
-    Point, RunDetail, ShowQuery, TrendQuery,
+    self, DiffQuery, Difference, KeyInfo, KeysQuery, LogEntry, LogQuery, Logged, NotRecorded,
+    Overview, Point, RunDetail, ShowQuery, TrendQuery,
 };
 use crate::format::event::{EventLine, Open};
 use crate::format::id::{IdError, Kind, Machine, RunId};
@@ -422,7 +422,7 @@ impl At<'_> {
     /// [`NotRecorded`] for a tree with no run; no trunk, for landings; an
     /// index failure.
     pub fn log(&self, query: &LogQuery) -> Result<Vec<LogEntry>, Error> {
-        if matches!(query, LogQuery::Landings(_)) {
+        if matches!(query.logged, Logged::Landings(_)) {
             self.trunk()?;
         }
         ask::log(self.db, query)
@@ -438,19 +438,20 @@ impl At<'_> {
         ask::show(self.db, query)
     }
 
-    /// One run and every outcome it recorded.
+    /// One run, whole: every outcome it recorded. [`ShowQuery::run`] asks for
+    /// a run narrowed by globs.
     ///
     /// # Errors
     /// [`NotRecorded`] for an unknown or unreadable run; an index failure.
     pub fn run(&self, run: &RunId) -> Result<RunDetail, Error> {
         // `show` of one run id answers that run, or refuses it as not recorded.
-        let [detail] = <[RunDetail; 1]>::try_from(ask::show(self.db, &ShowQuery::of(run))?)
+        let [detail] = <[RunDetail; 1]>::try_from(ask::show(self.db, &ShowQuery::run(run))?)
             .expect("show of one run id answers exactly that run");
         Ok(detail)
     }
 
-    /// The keys and metrics recorded, optionally of one kind and metrics
-    /// matching a glob.
+    /// The keys and metrics recorded, optionally narrowed by globs over the
+    /// kind and the metric.
     ///
     /// # Errors
     /// [`NotRecorded`] for a glob nothing matches; an index failure.

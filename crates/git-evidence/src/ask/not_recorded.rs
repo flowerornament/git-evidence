@@ -10,9 +10,9 @@ use crate::format::id::{CommitId, RunId, TreeId};
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[non_exhaustive]
 pub enum NotRecorded {
-    /// No run records this key.
+    /// No run records a key matching this name or glob.
     #[error(
-        "no run records key {key:?}; {}",
+        "no run records a key matching {key:?}; {}",
         nearest_names(nearest, "no key is recorded")
     )]
     Key { key: String, nearest: Vec<String> },
@@ -26,9 +26,9 @@ pub enum NotRecorded {
         metric: String,
         nearest: Vec<String>,
     },
-    /// No run of this kind is recorded.
+    /// No recorded run's kind matches this name or glob.
     #[error(
-        "no run of kind {kind:?} is recorded; {}",
+        "no recorded run's kind matches {kind:?}; {}",
         nearest_names(nearest, "no kind is recorded")
     )]
     Kind { kind: String, nearest: Vec<String> },

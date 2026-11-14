@@ -37,8 +37,8 @@ mod write;
 pub use ask::sql::{PUBLIC_SCHEMA, PUBLIC_VIEWS, Rows, SqlError, SqlValue};
 pub use ask::{
     Change, DiffQuery, Difference, KeyInfo, KeyOutcome, KeysQuery, Landing, LandingNumber,
-    LandingSummary, LogEntry, LogQuery, NotRecorded, Overview, Param, Point, RecordedMetric,
-    RunCount, RunDetail, RunValue, ShowQuery, Shown, ShownOutcome, TrendQuery,
+    LandingSummary, LogEntry, LogQuery, Logged, NotRecorded, Overview, Param, Point,
+    RecordedMetric, RunCount, RunDetail, RunValue, ShowQuery, Shown, ShownOutcome, TrendQuery,
 };
 pub use ask::{DateError, LandingRange, Selector, UtcDate};
 pub use evidence::{At, Error, Evidence};

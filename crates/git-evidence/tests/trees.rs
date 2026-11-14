@@ -34,7 +34,7 @@ fn a_candidate_that_lands_unchanged_carries_its_evidence() {
     f.evidence.record(&perf(), &lines).expect("record");
     let points = ask(&f, |at| at.trend(&parse_large_trend(1)));
     assert_eq!(points[0].landing.get(), 1);
-    let entries = ask(&f, |at| at.log(&LogQuery::Tree(tree(&f, &f.landings[1]))));
+    let entries = ask(&f, |at| at.log(&LogQuery::tree(&tree(&f, &f.landings[1]))));
     assert_eq!(entries.len(), 1);
 }
 

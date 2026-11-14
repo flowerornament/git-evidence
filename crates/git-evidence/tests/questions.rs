@@ -105,7 +105,7 @@ fn log_show_and_keys_answer_from_runs() {
         ("perf", Some("bench"), Some(0))
     );
     let run = run_ids(&f, &perf())[0].clone();
-    let detail = ask(&f, |at| at.show(&ShowQuery::of(&run).key("parse_*"))).remove(0);
+    let detail = ask(&f, |at| at.show(&ShowQuery::run(&run).key("parse_*"))).remove(0);
     assert_eq!(detail.outcomes.len(), 1, "filtered to one key");
     assert_eq!(detail.conditions, None, "a close may omit conditions");
     let unknown = not_recorded(&f, |at| {
@@ -175,9 +175,7 @@ fn refused_keys_give_no_rows() {
         &[("parse_large", p99(1.0))],
         Some(End::Complete),
     );
-    let points = ask(&f, |at| {
-        at.trend(&parse_large_trend(2).machine("bench".parse().expect("name")))
-    });
+    let points = ask(&f, |at| at.trend(&parse_large_trend(2).machine("bench")));
     assert_eq!(points, Vec::new());
     let elsewhere = ask(&f, |at| at.trend(&parse_large_trend(2)));
     assert_eq!(elsewhere.len(), 1, "{elsewhere:?}");
@@ -246,7 +244,7 @@ fn only_values_are_trend_rows_and_log_lists_every_run() {
     let points = ask(&f, |at| at.trend(&parse_large_trend(2)));
     let values: Vec<_> = points.iter().map(|p| (p.landing.get(), p.value)).collect();
     assert_eq!(values, vec![(0, 80.0)]);
-    let logged = ask(&f, |at| at.log(&LogQuery::Tree(tree(&f, &f.landings[1]))));
+    let logged = ask(&f, |at| at.log(&LogQuery::tree(&tree(&f, &f.landings[1]))));
     assert_eq!(logged.len(), 3, "{logged:?}");
 }
 
@@ -255,7 +253,7 @@ fn an_unknown_key_or_metric_in_show_and_keys_is_not_recorded() {
     let f = fixture(1);
     measured_run(&f, 0, 80.0);
     let run = run_ids(&f, &perf())[0].clone();
-    let shown = not_recorded(&f, |at| at.show(&ShowQuery::of(&run).key("parse_lareg")));
+    let shown = not_recorded(&f, |at| at.show(&ShowQuery::run(&run).key("parse_lareg")));
     let NotRecorded::Key { nearest, .. } = &shown else {
         panic!("{shown:?}")
     };

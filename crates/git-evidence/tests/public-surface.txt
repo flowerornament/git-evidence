@@ -35,6 +35,7 @@ LandingRange
 LandingSummary
 LogEntry
 LogQuery
+Logged
 Machine
 Measure
 MeasureOrigin
