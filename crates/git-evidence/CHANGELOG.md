@@ -4,6 +4,8 @@ All notable changes to `git-evidence` are recorded here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-14
+
 ### Added
 
 - **Builders for every part of an open.** `Open` gains `version`, `param`, `metric`, `suite`, `environment`, `build`, `keys` and `source` beside `harness` and `machine`, so a whole open is one expression: `Open::new(commit, producer).harness(…).machine(…).metric(name, Metric::lower("ns")).keys([…])`. `Suite`, `Environment`, `Build` and `Profile` gain `new()` and one builder method per field: `Suite::new().harness(…).param(…).metric(…)`, `Environment::new().machine(…).param(…).descriptor(…)`, `Build::new().profile(…).toolchain(…).artifact(…)`, `Profile::new().target(…).flags(…)`. Nothing written changes: the builders set the same fields the event lines carry.

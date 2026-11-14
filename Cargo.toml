@@ -3,7 +3,7 @@ members = ["crates/git-evidence", "crates/git-process"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.91"
 license = "MIT OR Apache-2.0"
@@ -13,7 +13,7 @@ repository = "https://github.com/flowerornament/git-evidence"
 serde = { version = "1.0.228", features = ["derive", "rc"] }
 serde_json = { version = "1.0.149", features = ["float_roundtrip"] }
 thiserror = "2.0.18"
-git-process = { version = "0.1.0", path = "crates/git-process" }
+git-process = { version = "0.2.0", path = "crates/git-process" }
 
 [workspace.lints.rust]
 # Deny unsafe without documented invariants

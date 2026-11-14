@@ -4,6 +4,8 @@ All notable changes to `git-process` are recorded here. The format follows [Keep
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-14
+
 ### Added
 
 - **The public surface is pinned.** The exported names, the `testing` feature's in their own section, are pinned in `tests/public-surface.txt` (checked by `tests/contract.rs`), so a change to them is recorded here.
