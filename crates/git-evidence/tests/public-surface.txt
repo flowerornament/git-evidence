@@ -1,17 +1,9 @@
-# The names git-evidence exports at its crate root. Checked by
-# tests/contract.rs; change only with a deliberate change of contract.
+# The names git-evidence exports at its crate root, then, under
+# [feature testing], the names that exist only with the `testing` feature:
+# the `testing` module and what it declares. Checked by tests/contract.rs;
+# change only with a deliberate change of contract, recorded in CHANGELOG.md.
 At
 Audit
-Bench
-BenchError
-BenchFigure
-BenchOrigin
-BenchReport
-BenchSample
-BenchStore
-BenchTemperature
-BenchTiming
-BenchVerb
 Build
 Change
 CommitId
@@ -89,7 +81,6 @@ ShownOutcome
 SqlError
 SqlValue
 StoreError
-StoreSize
 Suite
 TidyRows
 Timestamp
@@ -102,6 +93,18 @@ UtcDate
 Verdict
 VerdictStatus
 Violation
-bench_kind
 condition_leaves
+
+[feature testing]
 testing
+testing::Answered
+testing::Folded
+testing::HANG_GUARD
+testing::RunState
+testing::Scratch
+testing::audit_as
+testing::fold
+testing::index_file_name
+testing::note
+testing::notes
+testing::push_as

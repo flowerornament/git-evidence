@@ -30,7 +30,10 @@ let tree = git.tree_of(&head.expect("a commit"))?;
 ```
 
 The `testing` feature adds `testing::repo`: a throwaway repository with one
-commit, for tests of Git readers.
+commit, for tests of Git readers; and `StartFailureLog`, an observer that
+writes a test process's retried starts to the directory named by the
+environment variable `START_FAILURE_DIR`. The variable is always exported,
+since the harness that sets it is built without the feature.
 
 `git-evidence` is built on it and released with it at the same version.
 

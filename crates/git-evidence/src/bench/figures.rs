@@ -1,13 +1,12 @@
 //! What a bench measured: for each verb and temperature, a sample of wall
 //! times or why the command could not answer.
 
-use crate::rows::{TidyRows, cell, columns};
+use git_evidence::TidyRows;
 use serde::Serialize;
 
 /// One command a bench times. Its name is the key in the bench's run.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
-#[non_exhaustive]
 pub enum BenchVerb {
     /// `git evidence` with no verb.
     Overview,
@@ -57,7 +56,6 @@ impl BenchTemperature {
 
 /// Wall times of one command, in milliseconds.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-#[non_exhaustive]
 pub struct BenchSample {
     pub median_ms: f64,
     /// Median absolute deviation from the median; 0 for one time.
@@ -76,7 +74,6 @@ pub enum BenchFigure {
 
 /// One command's figure at one temperature.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[non_exhaustive]
 pub struct BenchTiming {
     pub verb: BenchVerb,
     pub temperature: BenchTemperature,
@@ -93,7 +90,6 @@ pub enum BenchOrigin {
 
 /// What a bench measured.
 #[derive(Debug, Clone, PartialEq, Serialize)]
-#[non_exhaustive]
 pub struct BenchReport {
     pub origin: BenchOrigin,
     /// Landings on the measured store's trunk.
@@ -104,11 +100,13 @@ pub struct BenchReport {
     pub timings: Vec<BenchTiming>,
 }
 
-impl TidyRows for crate::bench::BenchReport {
+impl TidyRows for BenchReport {
     fn header(&self) -> Vec<String> {
-        columns(&[
+        [
             "verb", "metric", "value", "unit", "n", "mad", "outcome", "detail",
-        ])
+        ]
+        .map(str::to_owned)
+        .to_vec()
     }
 
     fn rows(&self) -> Vec<Vec<Option<String>>> {
@@ -118,17 +116,17 @@ impl TidyRows for crate::bench::BenchReport {
                 let metric = Some(timing.temperature.metric().to_owned());
                 let verb = Some(timing.verb.name().to_owned());
                 match &timing.took {
-                    crate::bench::BenchFigure::Measured(sample) => vec![
+                    BenchFigure::Measured(sample) => vec![
                         verb,
                         metric,
-                        cell(sample.median_ms),
+                        Some(sample.median_ms.to_string()),
                         Some("ms".to_owned()),
-                        cell(sample.n),
-                        cell(sample.mad_ms),
+                        Some(sample.n.to_string()),
+                        Some(sample.mad_ms.to_string()),
                         Some("measured".to_owned()),
                         None,
                     ],
-                    crate::bench::BenchFigure::Failed(why) => vec![
+                    BenchFigure::Failed(why) => vec![
                         verb,
                         metric,
                         None,
@@ -136,7 +134,7 @@ impl TidyRows for crate::bench::BenchReport {
                         None,
                         None,
                         Some("failed".to_owned()),
-                        cell(why),
+                        Some(why.clone()),
                     ],
                 }
             })

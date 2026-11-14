@@ -61,7 +61,7 @@ just release-verify X.Y.Z   # every check of a release short of publishing (docs
 - **Permanent formats.** Pushed evidence lives in every clone. Never change the meaning of an event line (envelope `v: 2`) or the notes layout; a new optional field is the most a release may add (`docs/FORMAT.md`, section 5). A change to a public SQL view's name, columns or types is a new schema version and a new section appended to `crates/git-evidence/tests/public_schema.snap`, never an edit of an old one.
 - **No verdicts.** The tool records and prints numbers; judging them is the user's query. A proposal to judge (regressions, thresholds, expectations) is out of scope (`docs/DESIGN.md`, "Left out on purpose").
 - **One version.** Both crates inherit `[workspace.package] version` and are released together from a tag (`docs/RELEASE.md`); git-process is published first. Never tag, publish or push a tag without the maintainer's go.
-- **The public API is pinned.** `crates/git-evidence/tests/public-surface.txt` lists the crate root's exported names; a change to it is an API change and goes in the CHANGELOG.
+- **The public API is pinned.** Each crate's `tests/public-surface.txt` lists its crate root's exported names and, in their own section, the `testing` feature's; a change to it is an API change and goes in that crate's CHANGELOG.
 - **Nix in a workspace.** A jj workspace has no `.git`, so a flake reference `.` would be read from whatever repository encloses it. Use `nix build path:.` and `nix develop path:.` in a workspace; CI and the anchor can use `.`.
 
 ## Version Control

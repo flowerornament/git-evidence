@@ -24,8 +24,6 @@
 #![doc = include_str!("../README.md")]
 
 mod ask;
-#[cfg(feature = "bench")]
-mod bench;
 mod evidence;
 mod format;
 mod index;
@@ -43,11 +41,6 @@ pub use ask::{
     RunCount, RunDetail, RunValue, ShowQuery, Shown, ShownOutcome, TrendQuery,
 };
 pub use ask::{DateError, LandingRange, Selector, UtcDate};
-#[cfg(feature = "bench")]
-pub use bench::{
-    Bench, BenchError, BenchFigure, BenchOrigin, BenchReport, BenchSample, BenchStore,
-    BenchTemperature, BenchTiming, BenchVerb, StoreSize, bench_kind,
-};
 pub use evidence::{At, Error, Evidence};
 pub use format::event::{
     Build, Declaration, Direction, ENVELOPE_VERSION, End, Environment, Event, EventLine, Measure,

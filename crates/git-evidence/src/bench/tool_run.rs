@@ -3,8 +3,8 @@
 //! one per verb and one for the store's size.
 
 use super::{Bench, BenchError, BenchFigure, BenchReport, BenchStore, BenchVerb};
-use crate::format::event::{Measure, Metric, Open, Outcome, Reason};
-use crate::format::id::{CommitId, Key, Kind, Machine, MetricName, ProducerName};
+use git_evidence::{CommitId, Key, Kind, Machine, MetricName, ProducerName};
+use git_evidence::{Measure, Metric, Open, Outcome, Reason};
 
 /// The build profile of this binary, the instrument measuring itself.
 const PROFILE: &str = if cfg!(debug_assertions) {

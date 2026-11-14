@@ -1,9 +1,9 @@
 //! Process starts and their failed attempts. A start the OS refused ran
 //! nothing, so it is retried; every failed attempt is reported to the one
 //! observer a process may install, before any wait or refusal. This module
-//! reads no environment and writes no diagnostics itself: the optional
-//! notification directory named by [`START_FAILURE_DIR`] is read only by
-//! `StartFailureLog` (feature `testing`), an observer a test worker installs.
+//! reads no environment and writes no diagnostics itself; `StartFailureLog`
+//! (feature `testing`) is an observer that writes failures to a directory a
+//! test harness names.
 
 use crate::GitError;
 use std::{
@@ -12,9 +12,6 @@ use std::{
     process::{Child, Command, Output, Stdio},
     sync::OnceLock,
 };
-
-/// The private diagnostic destination passed to explicitly initialized workers.
-pub const START_FAILURE_DIR: &str = "GIT_PROCESS_START_FAILURE_DIR";
 
 /// One unsuccessful OS process start, observed before any retry or return.
 /// Program text is diagnostic replacement decoding, not an exact command or
@@ -56,6 +53,14 @@ impl StartFailureRecord {
         }
     }
 }
+
+/// The environment variable that names the directory a `StartFailureLog`
+/// (feature `testing`) writes to. A test harness, built without the feature,
+/// sets it for the test processes it starts and reads the directory when they
+/// are done: each process that had a start retried writes its first such
+/// failure there, as one JSON [`StartFailureRecord`] in
+/// `start-failure-<pid>.json`. Unset, the log writes nothing.
+pub const START_FAILURE_DIR: &str = "GIT_PROCESS_START_FAILURE_DIR";
 
 /// A process-local consumer of failed starts. Called synchronously before
 /// sleeping or refusing; it must not panic, recurse into this module, or block

@@ -8,11 +8,11 @@ use super::figures::{
 };
 use super::generate;
 use super::store::{self, BenchStore};
-use crate::ask::sql::SqlValue;
-use crate::evidence::{Error, Evidence};
-use crate::format::event::NotFinite;
-use crate::format::id::{CommitId, IdError};
-use crate::store::StoreError;
+use git_evidence::NotFinite;
+use git_evidence::SqlValue;
+use git_evidence::StoreError;
+use git_evidence::{CommitId, IdError};
+use git_evidence::{Error, Evidence};
 use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -33,7 +33,6 @@ pub struct Bench<'a> {
 
 /// Why a bench could not measure.
 #[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
 pub enum BenchError {
     #[error(transparent)]
     Store(#[from] StoreError),
@@ -297,8 +296,7 @@ mod tests {
             struct ObservedStart;
             impl git_process::StartObserver for ObservedStart {
                 fn failed(record: &git_process::StartFailureRecord) {
-                    let directory =
-                        std::env::var_os(git_process::START_FAILURE_DIR).expect("probe directory");
+                    let directory = std::env::var_os(CHILD).expect("probe directory");
                     std::fs::write(
                         std::path::Path::new(&directory).join("start.json"),
                         serde_json::to_vec(record).expect("typed start"),
@@ -326,7 +324,6 @@ mod tests {
         let output = Command::new(std::env::current_exe().expect("test executable"))
             .args(["--exact", "bench::measure::tests::a_measured_executable_start_reaches_the_observer_and_keeps_its_failure", "--nocapture"])
             .env(CHILD, directory.path())
-            .env(git_process::START_FAILURE_DIR, directory.path())
             .output().expect("probe child");
         assert!(
             output.status.success(),

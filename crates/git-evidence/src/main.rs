@@ -10,6 +10,7 @@
 //! a name nothing records ─▶ standard error, exit 2
 //! ```
 
+mod bench;
 mod cli {
     pub mod args;
     pub mod columns;
@@ -18,13 +19,14 @@ mod cli {
     pub mod revision;
 }
 
+use bench::{Bench, BenchStore, StoreSize};
 use clap::Parser as _;
 use cli::args::{Cli, Verb};
 use cli::revision::{resolve_range, resolve_tree};
 use git_evidence::{
-    Bench, BenchStore, DiffQuery, End, Error, EventLine, Evidence, Key, KeysQuery, Kind, LogQuery,
-    Machine, MetricName, Reason, RecordError, RemoteError, RunId, Selector, ShowQuery, Shown,
-    StoreSize, TidyRows, TrendQuery,
+    DiffQuery, End, Error, EventLine, Evidence, Key, KeysQuery, Kind, LogQuery, Machine,
+    MetricName, Reason, RecordError, RemoteError, RunId, Selector, ShowQuery, Shown, TidyRows,
+    TrendQuery,
 };
 use std::io::{Read as _, Write as _};
 use std::num::NonZeroU32;
@@ -296,7 +298,7 @@ fn bench(
         (Some(evidence), Some(path), Some(on)) => {
             let commit = cli::revision::resolve_commit(evidence, on)?;
             let open = bench.open(commit, &evidence.machine()?);
-            Some(evidence.run_to_file(&git_evidence::bench_kind(), open, path)?)
+            Some(evidence.run_to_file(&bench::bench_kind(), open, path)?)
         }
         _ => None,
     };

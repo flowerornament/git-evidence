@@ -1,12 +1,11 @@
-//! First retryable-start failure of each explicitly initialized test worker.
-//! The gate owns the directory and watches it; workers write no resource
-//! census and no evidence ledger. This is private diagnostic material.
+//! The first retried start failure of each test process, written to a
+//! directory the test harness names and reads afterwards (feature `testing`).
 
 use crate::{START_FAILURE_DIR, StartFailureRecord, StartObserver};
 use std::{fs::OpenOptions, io::Write as _, path::Path, sync::OnceLock};
 
-/// Reports the first retryable process-start failure in this process, if the parent
-/// supplied [`START_FAILURE_DIR`]. Install with
+/// Reports the first retried process-start failure in this process, if the
+/// environment names a directory in [`START_FAILURE_DIR`]. Install with
 /// `observe_start_failures::<StartFailureLog>()` before any fixture launch.
 /// Every executed test worker must initialize itself; exec resets registration.
 /// A notification failure is printed to stderr and never replaces the original

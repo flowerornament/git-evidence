@@ -4,8 +4,8 @@
 //! its objects, its evidence refs and its trunk copied).
 
 use super::BenchError;
-use crate::evidence::Evidence;
-use crate::store::StoreError;
+use git_evidence::Evidence;
+use git_evidence::StoreError;
 use git_process::Git;
 use serde::Serialize;
 use std::num::NonZeroU32;

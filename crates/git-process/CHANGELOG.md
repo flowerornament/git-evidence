@@ -4,6 +4,10 @@ All notable changes to `git-process` are recorded here. The format follows [Keep
 
 ## [Unreleased]
 
+### Added
+
+- The exported names, the `testing` feature's in their own section, are pinned in `tests/public-surface.txt` (checked by `tests/contract.rs`), so a change to them is recorded here.
+
 ## [0.1.0] - 2026-11-14
 
 The first version, released together with `git-evidence` at the same version: `git-evidence` re-exports its object ids, `IdError` and `Timestamp`, so the two are versioned and released together. 0.x because its API may still change between minors.

@@ -10,6 +10,9 @@ readme = "README.md"
 keywords = ["git", "subprocess", "process"]
 categories = ["development-tools"]
 
+[package.metadata.docs.rs]
+features = ["testing"]
+
 [lints]
 workspace = true
 

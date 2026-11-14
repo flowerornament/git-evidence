@@ -39,4 +39,4 @@ A published crate version cannot be replaced, only yanked (`cargo yank --version
 
 - From crates.io: `cargo install git-evidence`, then install the manual pages as the crate README's "Revisions, jj and the manual" says.
 - With Nix: the flake's `packages.<system>.default` installs `bin/git-evidence`, wrapped to find Git, with its manual pages in `share/man/man1`. Pin a release by tag (`github:flowerornament/git-evidence/vX.Y.Z`) or a commit (`?rev=<commit>`).
-- As a library: `cargo add git-evidence` (or `git-process` alone).
+- As a library: `cargo add git-evidence --no-default-features`, which leaves out the binary and its dependencies (feature `cli`), or `cargo add git-process` alone.

@@ -377,7 +377,7 @@ match evidence.at(|at| at.trend(&query)) {
 - Every answer and every report implements `TidyRows`: `value.header()` and `value.rows()` are what the command line prints.
 - `evidence.sql(query)` returns `Rows`, the rows of one read-only query (SQL, above).
 - `git_evidence::testing::Scratch` (feature `testing`) gives an integration's tests a throwaway repository, as these examples use.
-- The `bench` feature, on by default and needed by the binary, carries the `bench` verb's types; a library user can leave it out with `default-features = false`.
+- The `cli` feature, on by default, builds the `git-evidence` binary and its dependencies (clap and the manual-page generator); a library leaves it out with `default-features = false`, or `cargo add git-evidence --no-default-features`.
 
 ## Benchmark
 
@@ -444,11 +444,11 @@ The crash tests compile fault points into the write path with the `fault-injecti
 
 ## Stability
 
-The version is 0.x. The event lines (`v: 2`) and the notes layout are permanent: data written under them lives in every clone, and old versions stay readable. The public SQL views change only with their schema version. The CLI and the Rust API may change between 0.x minors, each change recorded in [CHANGELOG.md](CHANGELOG.md). Types that may grow are `#[non_exhaustive]`: the structs that mirror the event lines and the `declare`, `result` and `close` events, the answer and report rows, the queries, the errors, and enums that may gain a case (`LogQuery`, `Change`, `UpdateKind`, `MeasureOrigin`, `BenchVerb`). Build them through their constructors and builder methods, read them through their fields, and match them with a `..` or a `_` arm, so that a new optional field, column, case or error is not a breaking change. Which events and outcomes exist, how a run ends, and a metric's direction and a verdict's status are part of the permanent format, so `Event`, `Outcome`, `End`, `Direction` and `VerdictStatus` list every case.
+The version is 0.x. The event lines (`v: 2`) and the notes layout are permanent: data written under them lives in every clone, and old versions stay readable. The public SQL views change only with their schema version. The CLI and the Rust API may change between 0.x minors, each change recorded in [CHANGELOG.md](CHANGELOG.md). Types that may grow are `#[non_exhaustive]`: the structs that mirror the event lines and the `declare`, `result` and `close` events, the answer and report rows, the queries, the errors, and enums that may gain a case (`LogQuery`, `Change`, `UpdateKind`, `MeasureOrigin`). Build them through their constructors and builder methods, read them through their fields, and match them with a `..` or a `_` arm, so that a new optional field, column, case or error is not a breaking change. Which events and outcomes exist, how a run ends, and a metric's direction and a verdict's status are part of the permanent format, so `Event`, `Outcome`, `End`, `Direction` and `VerdictStatus` list every case.
 
 ## Dependencies
 
-Git, through its command line only; every call goes through one hardened boundary. `rusqlite` with bundled SQLite, `serde`, `serde_json`, `sha2`, `thiserror`, `tempfile` (the bench's store) and `clap`, with `clap_mangen` and `roff` to render the manual.
+Git, through its command line only; every call goes through one hardened boundary. The library: `rusqlite` with bundled SQLite, `serde`, `serde_json`, `sha2`, `thiserror` and `tempfile` (atomic writes of the index and the store). The `cli` feature, on by default, adds `clap`, with `clap_mangen` and `roff` to render the manual; a library caller turns it off with `default-features = false`.
 
 ## License
 

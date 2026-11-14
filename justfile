@@ -1,9 +1,13 @@
 # Against the committed lock file; CI runs exactly this on Linux and macOS.
 #
-# The gate: fmt, strict clippy, every test and doc test, API docs, both crates packaged
+# The gate: fmt, strict clippy (also on the libraries as a caller with
+# `default-features = false` builds them, with and without `testing`), every
+# test and doc test, API docs, both crates packaged
 check: && package
     cargo fmt --all --check
     cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    cargo clippy --workspace --lib --no-default-features --locked -- -D warnings
+    cargo clippy -p git-evidence --lib --no-default-features --features testing --locked -- -D warnings
     cargo test --workspace --all-features --locked
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features --locked
 

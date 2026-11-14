@@ -16,11 +16,10 @@
 
 use super::store::{COMMITTER_EMAIL, COMMITTER_NAME};
 use super::{BenchError, StoreSize};
-use crate::format::event::{
-    ENVELOPE_VERSION, End, Event, EventLine, Measure, Metric, Open, Outcome, Try, Verdict,
-    VerdictStatus,
+use git_evidence::{CommitId, Key, Kind, Machine, MetricName, ProducerName, RunId, TreeId};
+use git_evidence::{
+    End, Event, EventLine, Measure, Metric, Open, Outcome, Timestamp, Try, Verdict, VerdictStatus,
 };
-use crate::format::id::{CommitId, Key, Kind, Machine, MetricName, ProducerName, RunId, TreeId};
 use git_process::Git;
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -62,7 +61,7 @@ pub(super) fn generate(git: &Git, size: StoreSize) -> Result<(), BenchError> {
             let (commit, tree) = line.split_once(' ').unwrap_or((line, ""));
             Ok((CommitId::parse(commit)?, TreeId::parse(tree)?))
         })
-        .collect::<Result<Vec<_>, crate::format::id::IdError>>()?;
+        .collect::<Result<Vec<_>, git_evidence::IdError>>()?;
     let mut stream = Vec::new();
     for (kind, notes) in notes(&landed, size)? {
         write!(
@@ -153,7 +152,7 @@ pub(super) fn fresh_run(commit: &CommitId) -> Result<Vec<EventLine>, BenchError>
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
     let opened = u64::try_from(now.as_millis()).unwrap_or(EPOCH_MS);
-    lines(&crate::format::id::RunId::new(), opened, true, 0, commit)
+    lines(&git_evidence::RunId::new(), opened, true, 0, commit)
 }
 
 /// The lines of one run opened at `opened` (Unix milliseconds): perf, with
@@ -202,25 +201,18 @@ fn lines(
     }
     let open = open.keys(results.iter().map(|(key, _)| key.clone()));
     let mut events = vec![Event::Open(Box::new(open))];
-    events.extend(results.into_iter().map(|(key, outcome)| Event::Result {
-        key,
-        outcome,
-        location: None,
-    }));
-    events.push(Event::Close {
-        end: End::Complete,
-        conditions: None,
-    });
+    events.extend(
+        results
+            .into_iter()
+            .map(|(key, outcome)| Event::result(key, outcome)),
+    );
+    events.push(Event::close(End::Complete));
     let lines = events
         .into_iter()
         .zip(0u32..)
-        .map(|(event, seq)| EventLine {
-            v: ENVELOPE_VERSION,
-            run: id.clone(),
-            seq,
-            time: git_process::Timestamp::from_unix_millis(u128::from(opened + u64::from(seq)))
-                .into(),
-            event,
+        .map(|(event, seq)| {
+            let time = Timestamp::from_unix_millis(u128::from(opened + u64::from(seq)));
+            EventLine::new(id.clone(), seq, time, event)
         })
         .collect();
     Ok(lines)
@@ -254,8 +246,7 @@ fn text(bytes: &mut Vec<u8>) -> impl std::fmt::Write + '_ {
 mod tests {
     use super::*;
     use crate::bench::store::init_bare;
-    use crate::evidence::Evidence;
-    use crate::store::Store;
+    use git_evidence::Evidence;
     use std::num::NonZeroU32;
 
     fn size(landings: u32, runs: u32) -> StoreSize {
@@ -295,17 +286,21 @@ mod tests {
             written += lines.len();
         }
         assert!(written > 13 * 3, "every run was recorded");
-        let (bulk_store, recorded_store) =
-            (Store::open(bulk.git_dir()), Store::open(recorded.git_dir()));
+        // A note's blob id names its bytes, so equal listings (tree and
+        // blob, for every tree) are equal notes.
         for kind in ["perf", "checks"] {
-            let kind = Kind::parse(kind).expect("kind");
-            for (_, tree) in &landed {
-                assert_eq!(
-                    bulk_store.read_note(&kind, tree).expect("bulk"),
-                    recorded_store.read_note(&kind, tree).expect("recorded"),
-                    "{kind} on {tree}"
-                );
-            }
+            let notes_ref = format!("refs/notes/evidence/{kind}");
+            let list = |git: &Git| {
+                git.run(&["notes", "--ref", &notes_ref, "list"], None)
+                    .expect("notes")
+            };
+            let listed = list(&bulk);
+            assert_eq!(
+                String::from_utf8_lossy(&listed).lines().count(),
+                landed.len(),
+                "{kind}: a note on every landing"
+            );
+            assert_eq!(listed, list(&recorded), "{kind}");
         }
     }
 
@@ -321,9 +316,9 @@ mod tests {
         assert_eq!(
             rows.rows,
             vec![vec![
-                crate::ask::sql::SqlValue::Integer(7),
-                crate::ask::sql::SqlValue::Integer(14),
-                crate::ask::sql::SqlValue::Integer(0)
+                git_evidence::SqlValue::Integer(7),
+                git_evidence::SqlValue::Integer(14),
+                git_evidence::SqlValue::Integer(0)
             ]]
         );
     }

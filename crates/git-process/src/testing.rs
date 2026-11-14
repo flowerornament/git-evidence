@@ -1,6 +1,8 @@
 //! A throwaway repository for tests of code that reads Git (feature `testing`),
 //! and the Git a fixture runs: the same on every machine, whatever identity,
-//! home and configuration the runner has.
+//! home and configuration the runner has. [`crate::START_FAILURE_DIR`] names the
+//! directory where [`StartFailureLog`] writes a test
+//! process's retried starts.
 //!
 //! ```text
 //!   runner's environment ──► hermetic(command) ──► git with no global or system

@@ -1,6 +1,7 @@
-//! `git evidence bench`: the tool's own benchmark. It times the command line
-//! answering on a store nobody else reads, in
-//! a temporary directory: a store generated at a declared size, or a copy of
+//! `git evidence bench`: the tool's own benchmark, a module of the binary
+//! built on the library's public API like any other caller. It times the
+//! command line answering on a store nobody else reads, in a temporary
+//! directory: a store generated at a declared size, or a copy of
 //! an existing store that borrows its objects (Git alternates) and copies its
 //! evidence refs, so the store in use is only read, and its index is never
 //! rebuilt or locked.
@@ -32,9 +33,7 @@ mod stats;
 mod store;
 mod tool_run;
 
-pub use figures::{
-    BenchFigure, BenchOrigin, BenchReport, BenchSample, BenchTemperature, BenchTiming, BenchVerb,
-};
+pub use figures::{BenchFigure, BenchReport, BenchVerb};
 pub use measure::{Bench, BenchError};
 pub use store::{BenchStore, StoreSize};
 pub use tool_run::bench_kind;

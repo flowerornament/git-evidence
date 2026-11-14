@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   # The same gate as a local `just check`, in the flake's dev shell: rustfmt,
-  # strict Clippy, every test and doc test with the test-only features, the
+  # strict Clippy (also on the libraries without the `cli` default feature),
+  # every test and doc test with the test-only features, the
   # API docs, and both crates packaged and built from their packages.
   check:
     strategy:

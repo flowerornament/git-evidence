@@ -157,10 +157,10 @@ pub struct Bench {
     #[arg(long, conflicts_with_all = ["landings", "runs"])]
     pub this_store: bool,
     /// Landings of the generated store.
-    #[arg(long, default_value_t = git_evidence::StoreSize::TARGET.landings)]
+    #[arg(long, default_value_t = crate::bench::StoreSize::TARGET.landings)]
     pub landings: std::num::NonZeroU32,
     /// Runs of the generated store, spread evenly over its landings.
-    #[arg(long, default_value_t = git_evidence::StoreSize::TARGET.runs)]
+    #[arg(long, default_value_t = crate::bench::StoreSize::TARGET.runs)]
     pub runs: u32,
     /// Times each warm figure is taken; it reports their median.
     #[arg(long, default_value = "5")]

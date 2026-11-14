@@ -1,0 +1,31 @@
+# The names git-process exports at its crate root, then, under
+# [feature testing], the names that exist only with the `testing` feature:
+# StartFailureLog, the `testing` module and what it declares. Checked by
+# tests/contract.rs; change only with a deliberate change of contract,
+# recorded in CHANGELOG.md.
+AlreadyObserved
+CommitId
+Git
+GitError
+IdError
+NotATimestamp
+ObjectId
+START_FAILURE_DIR
+StartFailureRecord
+StartObserver
+Timestamp
+TreeEntry
+TreeId
+isolated
+observe_start_failures
+output_of
+start
+
+[feature testing]
+StartFailureLog
+testing
+testing::EMAIL
+testing::NAME
+testing::fixture_config
+testing::hermetic
+testing::repo
