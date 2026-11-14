@@ -306,12 +306,11 @@ impl TidyRows for Recorded {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::format::event::{Build, ENVELOPE_VERSION, End, Metric, Open, Outcome, Try};
-    use crate::format::event::{Environment, Producer, Reason, Suite};
+    use crate::format::event::{ENVELOPE_VERSION, End, Metric, Open, Outcome, Reason, Try};
     use crate::format::fold::Problem;
     use crate::format::fold::tests::measured;
     use crate::format::id::{CommitId, ProducerName};
-    use crate::format::id::{Key, MetricName};
+    use crate::format::id::{Key, Machine, MetricName};
     use crate::write::Run;
     use git_process::testing;
 
@@ -323,28 +322,16 @@ mod tests {
             .expect("master");
         let store = Store::open(git.git_dir());
         let tree = TreeId::parse(git.tree_of(&master).expect("tree").as_str()).expect("tree");
-        let open = Open {
-            commit: CommitId::parse(master.as_str()).expect("commit"),
-            producer: Producer {
-                name: ProducerName::parse("bench-suite").expect("producer"),
-                version: None,
-            },
-            suite: Suite {
-                metrics: [(
-                    crate::format::fold::tests::p99_ns(),
-                    crate::format::fold::tests::ns(),
-                )]
-                .into(),
-                ..Suite::default()
-            },
-            environment: Environment {
-                machine: "bench".into(),
-                ..Environment::default()
-            },
-            build: Build::default(),
-            keys: Some(vec![key("a"), key("b")]),
-            source: None,
-        };
+        let open = Open::new(
+            CommitId::parse(master.as_str()).expect("commit"),
+            ProducerName::parse("bench-suite").expect("producer"),
+        )
+        .metric(
+            crate::format::fold::tests::p99_ns(),
+            crate::format::fold::tests::ns(),
+        )
+        .machine(Machine::parse("bench").expect("machine"))
+        .keys([key("a"), key("b")]);
         (dir, store, Kind::parse("perf").expect("kind"), open, tree)
     }
 

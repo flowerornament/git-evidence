@@ -334,11 +334,13 @@ use git_evidence::{End, Metric, MetricName, Open, Outcome};
 # let commit = scratch.landing(0);
 
 let p99 = MetricName::parse("latency.p99_ns")?;
-let mut open = Open::new(commit, "bench-suite".parse()?)
+let open = Open::new(commit, "bench-suite".parse()?)
+    .version("1.4.0")
     .harness("bench-suite/2")
-    .machine(evidence.machine()?);
-open.keys = Some(vec!["parser/parse_large".parse()?]);
-open.suite.metrics.insert(p99.clone(), Metric::lower("ns"));
+    .param("repeats", 20)
+    .machine(evidence.machine()?)
+    .metric(p99.clone(), Metric::lower("ns"))
+    .keys(["parser/parse_large".parse()?]);
 let mut run = evidence.run(&"perf".parse()?, open)?; // durable before any work
 run.result(&"parser/parse_large".parse()?, Outcome::measured(p99, 88_634.0)?)?;
 run.close(End::Complete)?; // refused if a key was left unanswered
@@ -365,9 +367,9 @@ match evidence.at(|at| at.trend(&query)) {
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-- `run.declare(Declaration::keys(…).metric(…))` names the keys and metrics a producer learns only once it has started, before any result. `run.result_at` records a result with the code site that produced it.
+- `run.declare(Declaration::new().keys(…).metric(…))` names the keys and metrics a producer learns only once it has started, before any result. `run.result_at` records a result with the code site that produced it.
 - `run.finish()` writes the rest of a run (a late declaration, the results, close conditions, the close) as one all-or-nothing commit.
-- An open needs only its commit and producer: `Open::new(commit, producer)`, with `.harness(…)` and `.machine(…)` when they are known; a run that names neither records `""` for both. Outcomes and their parts have constructors: `Outcome::measured`, `Outcome::pass()`, `Outcome::fail()`, `Verdict::new(status, tries)` with `Try::new(status).duration_ms(…).cpu_ms(…)`, `Reason::new("timeout").detail(…)`, `Metric::lower("ns")`, `Measure::new(metric, value)?.n(20).mad(310.0)`; lines for `record` are `EventLine::new` with `Event::result`, `Event::close` or a `Declaration`. A query is its constructor with one method per filter: `TrendQuery::new(metric, key).machine(…).landings(Selector::newest(n))`.
+- Every value is built by its constructor and one builder method per thing it sets. An open needs only its commit and producer, `Open::new(commit, producer)`; the rest is `.version(…)`, `.harness(…)`, `.param(…)` (a suite parameter), `.metric(…)`, `.suite(…)`, `.machine(…)`, `.environment(…)`, `.build(…)`, `.keys(…)` and `.source(…)`, each when it is known (a run that names no harness or machine records `""` for it). Its parts build the same way, and `.suite(…)`, `.environment(…)` and `.build(…)` each replace that part whole: `Suite::new().harness(…).param(…).metric(…)`, `Environment::new().machine(…).param(…).descriptor(…)`, `Build::new().profile(Profile::new().target(…).flags(…)).toolchain(…).artifact(…)`. Outcomes and their parts: `Outcome::measured`, `Outcome::pass()`, `Outcome::fail()`, `Verdict::new(status, tries)` with `Try::new(status).duration_ms(…).cpu_ms(…)`, `Reason::new("timeout").detail(…)`, `Metric::lower("ns")`, `Measure::new(metric, value)?.n(20).mad(310.0)`. A builder for an optional field takes the value or an `Option` of it (the trait `Optional`), so `.cpu_ms(cpu)` with `cpu: Option<f64>` records the time when it was measured and nothing when it was not. Lines for `record` are `EventLine::new` with `Event::result`, `Event::close` or a `Declaration`. A query is its constructor with one method per filter: `TrendQuery::new(metric, key).machine(…).landings(Selector::newest(n))`.
 - `evidence.resume(kind, &id)` finds a run after a crash.
 - `evidence.record(kind, &lines)` takes lines built elsewhere; it is `git evidence record`.
 - `evidence.at(|at| …)` asks questions in one read of the store, one method per verb, each taking its query (`TrendQuery`, `LogQuery`, `ShowQuery`, `KeysQuery`, `DiffQuery`). `at.overview(n)` lists the newest landings, including those without runs, each with its run counts; `at.log` lists the runs on a tree or on selected landings, `at.show` the runs a revision or a run id names, and `at.run(&id)` one run.
@@ -442,7 +444,7 @@ The crash tests compile fault points into the write path with the `fault-injecti
 
 ## Stability
 
-The version is 0.x. The event lines (`v: 2`) and the notes layout are permanent: data written under them lives in every clone, and old versions stay readable. The public SQL views change only with their schema version. The CLI and the Rust API may change between 0.x minors, each change recorded in [CHANGELOG.md](CHANGELOG.md). Types that may grow are `#[non_exhaustive]`: the structs that mirror the event lines and the `declare`, `result` and `close` events, the answer and report rows, the queries, the errors, and enums that may gain a case (`LogQuery`, `Change`, `UpdateKind`, `MeasureOrigin`, `BenchVerb`). Build them through their constructors and fields, and match them with a `..` or a `_` arm, so that a new optional field, column, case or error is not a breaking change. Which events and outcomes exist, how a run ends, and a metric's direction and a verdict's status are part of the permanent format, so `Event`, `Outcome`, `End`, `Direction` and `VerdictStatus` list every case.
+The version is 0.x. The event lines (`v: 2`) and the notes layout are permanent: data written under them lives in every clone, and old versions stay readable. The public SQL views change only with their schema version. The CLI and the Rust API may change between 0.x minors, each change recorded in [CHANGELOG.md](CHANGELOG.md). Types that may grow are `#[non_exhaustive]`: the structs that mirror the event lines and the `declare`, `result` and `close` events, the answer and report rows, the queries, the errors, and enums that may gain a case (`LogQuery`, `Change`, `UpdateKind`, `MeasureOrigin`, `BenchVerb`). Build them through their constructors and builder methods, read them through their fields, and match them with a `..` or a `_` arm, so that a new optional field, column, case or error is not a breaking change. Which events and outcomes exist, how a run ends, and a metric's direction and a verdict's status are part of the permanent format, so `Event`, `Outcome`, `End`, `Direction` and `VerdictStatus` list every case.
 
 ## Dependencies
 

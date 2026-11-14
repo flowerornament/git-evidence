@@ -177,15 +177,13 @@ fn lines(
     .machine(Machine::parse(MACHINE)?);
     let mut results = Vec::new();
     if perf {
-        open.suite
-            .metrics
-            .insert(MetricName::parse(METRIC)?, Metric::lower("ns"));
+        open = open.metric(MetricName::parse(METRIC)?, Metric::lower("ns"));
         for k in 0..PERF_KEYS {
             // A quiet series: within 4% of 1000.
             let value = 1000.0 + f64::from((n % 1000 * 7 + k * 13) % 40);
-            let mut measure = Measure::new(MetricName::parse(METRIC)?, value)?;
-            measure.n = Some(5);
-            measure.mad = Some(1.0);
+            let measure = Measure::new(MetricName::parse(METRIC)?, value)?
+                .n(5)
+                .mad(1.0);
             results.push((Key::parse(&perf_key(k))?, Outcome::Measured(vec![measure])));
         }
     } else {
@@ -202,7 +200,7 @@ fn lines(
             ));
         }
     }
-    open.keys = Some(results.iter().map(|(key, _)| key.clone()).collect());
+    let open = open.keys(results.iter().map(|(key, _)| key.clone()));
     let mut events = vec![Event::Open(Box::new(open))];
     events.extend(results.into_iter().map(|(key, outcome)| Event::Result {
         key,

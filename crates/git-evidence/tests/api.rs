@@ -14,12 +14,11 @@ fn evidence(f: &Fixture) -> Evidence {
     Evidence::open(f.git.git_dir()).trunk("refs/heads/master")
 }
 
-fn declaring_ns(mut open: git_evidence::Open) -> git_evidence::Open {
-    open.suite.metrics.insert(
+fn declaring_ns(open: git_evidence::Open) -> git_evidence::Open {
+    open.metric(
         MetricName::parse("block.p99_ns").expect("metric"),
         Metric::lower("ns"),
-    );
-    open
+    )
 }
 
 #[test]
@@ -96,7 +95,7 @@ fn finish_writes_the_rest_of_a_run_in_one_commit_or_nothing() {
     let before = notes();
     let refused = run
         .finish()
-        .declare(Declaration::keys(vec![key("fmt")]))
+        .declare(Declaration::new().keys(vec![key("fmt")]))
         .results([(key("fmt"), pass(1.0)), (key("clippy"), pass(2.0))])
         .end(End::Complete);
     assert!(refused.is_err(), "clippy was never declared");
@@ -110,7 +109,7 @@ fn finish_writes_the_rest_of_a_run_in_one_commit_or_nothing() {
     resumed
         .run
         .finish()
-        .declare(Declaration::keys(vec![key("fmt"), key("clippy")]))
+        .declare(Declaration::new().keys(vec![key("fmt"), key("clippy")]))
         .results([(key("fmt"), pass(1.0)), (key("clippy"), pass(2.0))])
         .conditions(serde_json::json!({"tests_observed": 2}))
         .end(End::Complete)
@@ -269,7 +268,7 @@ fn a_returned_run_is_a_whole_recordable_run_after_every_write_and_never_in_this_
     let id = run.id().clone();
     let begun = read();
     assert_eq!(begun.len(), 1, "the open is returned before any work");
-    run.declare(Declaration::keys(vec![key("parse_large")]))
+    run.declare(Declaration::new().keys(vec![key("parse_large")]))
         .expect("declare");
     let before = read();
     let refused = run.result(&key("additive"), p99(1.0));

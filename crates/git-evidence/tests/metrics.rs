@@ -67,15 +67,15 @@ fn record_refuses_what_its_declarations_do_not_cover_and_writes_nothing() {
         ("block.p99_ns", Metric::new("us", ns().better), "redefined"),
         ("verdict.pass.duration_ms", ns(), "derived metric"),
     ] {
-        let mut opened = open(&f.landings[0], &Shape::default(), &["parse_large"]);
-        opened.suite.metrics.insert(metric("block.p99_ns"), ns());
+        let opened = open(&f.landings[0], &Shape::default(), &["parse_large"])
+            .metric(metric("block.p99_ns"), ns());
         let run = RunId::new();
         let lines = vec![
             event_line(&run.clone(), 0, Event::Open(Box::new(opened))),
             event_line(
                 &run,
                 1,
-                Declaration::default().metric(metric(name), declared).into(),
+                Declaration::new().metric(metric(name), declared).into(),
             ),
         ];
         let refused = refusal(&lines, &f);

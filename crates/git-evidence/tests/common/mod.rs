@@ -9,8 +9,9 @@
 use git_evidence::At;
 use git_evidence::Recorded;
 use git_evidence::{CommitId, Key, Kind, MetricName, ProducerName, RunId, TreeId};
-use git_evidence::{Direction, End, Event, EventLine, Measure, Metric, Open, Outcome, Reason};
+use git_evidence::{Direction, End, Environment, Event, EventLine, Measure, Metric, Open};
 use git_evidence::{Error, Evidence};
+use git_evidence::{Outcome, Reason};
 use git_process::TreeEntry;
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -316,19 +317,22 @@ pub fn declaring(mut open: Open, shape: &Shape, results: &[(&str, Outcome)]) -> 
 }
 
 pub fn open(commit: &CommitId, shape: &Shape, keys: &[&str]) -> Open {
+    let environment = shape
+        .params
+        .iter()
+        .fold(Environment::new(), |environment, (name, value)| {
+            environment.param(*name, *value)
+        });
     let mut open = Open::new(
         commit.clone(),
         ProducerName::parse(shape.producer).expect("producer"),
     )
-    .harness(shape.harness);
-    // As written, so a test can name no machine, which `Machine` refuses.
+    .harness(shape.harness)
+    .environment(environment)
+    .keys(keys.iter().map(|k| key(k)));
+    // As written, so a test can name no machine (or one that is not a
+    // machine name), which `Machine` refuses.
     shape.machine.clone_into(&mut open.environment.machine);
-    open.environment.params = shape
-        .params
-        .iter()
-        .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
-        .collect();
-    open.keys = Some(keys.iter().map(|k| key(k)).collect());
     open
 }
 

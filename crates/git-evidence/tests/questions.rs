@@ -22,18 +22,13 @@ fn declared_run(f: &Fixture, landing: usize, flags: &str, value: f64) {
     open.keys = None;
     let events = vec![
         Event::Open(Box::new(open)),
-        Declaration::keys([key("parse_large")])
+        Declaration::new()
+            .keys([key("parse_large")])
             .metric(
                 git_evidence::MetricName::parse("block.p99_ns").expect("metric"),
                 git_evidence::Metric::lower("ns"),
             )
-            .build({
-                let mut profile = Profile::default();
-                profile.flags = Some(flags.into());
-                let mut build = Build::default();
-                build.profile = Some(profile);
-                build
-            })
+            .build(Build::new().profile(Profile::new().flags(flags)))
             .into(),
         Event::result(key("parse_large"), p99(value)),
         Event::close(End::Complete),

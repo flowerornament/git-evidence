@@ -11,8 +11,7 @@ use git_evidence::NotRecorded;
 
 /// A run of `source` on landing 0, as an importer would project it.
 fn projection(f: &Fixture, source: &str, outcome: git_evidence::Outcome) {
-    let mut opened = open(&f.landings[0], &Shape::default(), &["parse_large"]);
-    opened.source = Some(source.into());
+    let opened = open(&f.landings[0], &Shape::default(), &["parse_large"]).source(source);
     let lines = run_lines(opened, &[("parse_large", outcome)], Some(End::Complete));
     f.evidence.record(&perf(), &lines).expect("record");
 }

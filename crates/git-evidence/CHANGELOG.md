@@ -4,9 +4,16 @@ All notable changes to `git-evidence` are recorded here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- **Builders for every part of an open.** `Open` gains `version`, `param`, `metric`, `suite`, `environment`, `build`, `keys` and `source` beside `harness` and `machine`, so a whole open is one expression: `Open::new(commit, producer).harness(…).machine(…).metric(name, Metric::lower("ns")).keys([…])`. `Suite`, `Environment`, `Build` and `Profile` gain `new()` and one builder method per field: `Suite::new().harness(…).param(…).metric(…)`, `Environment::new().machine(…).param(…).descriptor(…)`, `Build::new().profile(…).toolchain(…).artifact(…)`, `Profile::new().target(…).flags(…)`. Nothing written changes: the builders set the same fields the event lines carry.
+- **`Optional<T>`**, a sealed trait for a value or an `Option` of it, which every builder of an optional field takes (implemented for `f64`, `u32`, `&str`, `String`, `&String`, `Profile`, `Sha256` and an `Option` of each).
+
 ### Changed
 
+- **`Declaration::new()` starts a declaration; `keys` is a builder.** A late declaration of only metrics or only a build no longer starts from `Default`, and every value now starts from a constructor. Migration: `Declaration::keys(k)` becomes `Declaration::new().keys(k)`.
 - **`manual DIR` is listed.** `git evidence --help` now lists the `manual` verb, which writes the manual pages, and it has its own page.
+- **A builder for an optional field takes the value or an `Option`.** `Try::duration_ms`, `Try::cpu_ms`, `Measure::n`, `Measure::mad`, `Reason::detail` and `Producer::version` take `impl Optional<T>`, so a time or a detail that is not always known passes straight through (`Try::new(status).cpu_ms(cpu)` with `cpu: Option<f64>`), and `None` leaves the field absent. `Try::duration_ms`, `Try::cpu_ms`, `Measure::n` and `Measure::mad` are no longer `const fn`; `Reason::detail` and `Producer::version` no longer take every `Into<String>`. Migration: a plain `f64`, `u32`, `&str` or `String` compiles as before; drop a `match` or `if let` that called the builder only for `Some`, and pass the `Option`; name the type of a bare `None` for text (`None::<&str>`); convert other text (`Box<str>`, `Cow<str>`, `char`) with `.to_string()`; build outside a `const` context.
 
 ## [0.1.0] - 2026-11-14
 

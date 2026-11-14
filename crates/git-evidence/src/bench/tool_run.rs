@@ -3,7 +3,7 @@
 //! one per verb and one for the store's size.
 
 use super::{Bench, BenchError, BenchFigure, BenchReport, BenchStore, BenchVerb};
-use crate::format::event::{Direction, Measure, Metric, Open, Outcome, Reason};
+use crate::format::event::{Measure, Metric, Open, Outcome, Reason};
 use crate::format::id::{CommitId, Key, Kind, Machine, MetricName, ProducerName};
 
 /// The build profile of this binary, the instrument measuring itself.
@@ -29,60 +29,40 @@ impl Bench<'_> {
     /// Never: every name is a constant that parses.
     #[must_use]
     pub fn open(&self, commit: CommitId, machine: &Machine) -> Open {
-        let mut open = Open::new(
+        let metric = |name| MetricName::parse(name).expect("a metric name");
+        let open = Open::new(
             commit,
             ProducerName::parse("git-evidence").expect("a producer name"),
         )
+        .version(env!("CARGO_PKG_VERSION"))
         .harness("git-evidence-bench/1")
-        .machine(machine.clone());
-        open.producer.version = Some(env!("CARGO_PKG_VERSION").to_owned());
-        let params = &mut open.suite.params;
+        .machine(machine.clone())
         // The instrument, so every figure names it: the wall clock around one
         // process, its start included, the binary's compile not, and the
         // build profile it was compiled in.
-        for (name, value) in [
-            ("clock", "wall"),
-            ("process_start", "included"),
-            ("compile", "excluded"),
-            ("profile", PROFILE),
-        ] {
-            params.insert(name.into(), value.into());
-        }
-        params.insert("repeats".into(), self.repeats.get().to_string().into());
-        match self.store {
-            BenchStore::Generated(size) => {
-                params.insert("store".into(), "generated".into());
-                params.insert("landings".into(), size.landings.get().to_string().into());
-                params.insert("runs".into(), size.runs.to_string().into());
-            }
-            BenchStore::Existing(_) => {
-                params.insert("store".into(), "existing".into());
-            }
-        }
-        let metrics = &mut open.suite.metrics;
-        for (name, unit, better) in [
-            ("cold_ms", "ms", Some(Direction::Lower)),
-            ("warm_ms", "ms", Some(Direction::Lower)),
-            ("landings", "{landing}", None),
-            ("runs", "{run}", None),
-        ] {
-            metrics.insert(
-                MetricName::parse(name).expect("a metric name"),
-                Metric {
-                    unit: unit.into(),
-                    better,
-                },
-            );
-        }
-        open.keys = Some(
+        .param("clock", "wall")
+        .param("process_start", "included")
+        .param("compile", "excluded")
+        .param("profile", PROFILE)
+        .param("repeats", self.repeats.get().to_string())
+        .metric(metric("cold_ms"), Metric::lower("ms"))
+        .metric(metric("warm_ms"), Metric::lower("ms"))
+        .metric(metric("landings"), Metric::new("{landing}", None))
+        .metric(metric("runs"), Metric::new("{run}", None))
+        .keys(
             BenchVerb::ALL
                 .iter()
                 .map(|verb| verb.name())
                 .chain(["store"])
-                .map(|key| Key::parse(key).expect("a key"))
-                .collect(),
+                .map(|key| Key::parse(key).expect("a key")),
         );
-        open
+        match self.store {
+            BenchStore::Generated(size) => open
+                .param("store", "generated")
+                .param("landings", size.landings.get().to_string())
+                .param("runs", size.runs.to_string()),
+            BenchStore::Existing(_) => open.param("store", "existing"),
+        }
     }
 }
 

@@ -485,7 +485,7 @@ fn merge_build(into: &mut Build, from: Build) {
 pub(crate) mod tests {
     use super::*;
     use crate::format::event::Reason;
-    use crate::format::event::{ENVELOPE_VERSION, Environment, Measure, Metric, Producer, Suite};
+    use crate::format::event::{ENVELOPE_VERSION, Metric};
     use crate::format::id::{CommitId, MetricName, ProducerName};
 
     pub(crate) const RUN: &str = "01JA8Z3K4M0000000000000000";
@@ -506,20 +506,14 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn open(keys: Option<&[&str]>) -> Event {
-        Event::Open(Box::new(Open {
-            commit: CommitId::parse(&"c".repeat(40)).expect("commit"),
-            producer: Producer {
-                name: ProducerName::parse("bench-suite").expect("producer"),
-                version: None,
-            },
-            suite: Suite {
-                metrics: [(p99_ns(), ns())].into(),
-                ..Suite::default()
-            },
-            environment: Environment::default(),
-            build: Build::default(),
-            keys: keys.map(|keys| keys.iter().map(|k| key(k)).collect()),
-            source: None,
+        let open = Open::new(
+            CommitId::parse(&"c".repeat(40)).expect("commit"),
+            ProducerName::parse("bench-suite").expect("producer"),
+        )
+        .metric(p99_ns(), ns());
+        Event::Open(Box::new(match keys {
+            Some(keys) => open.keys(keys.iter().map(|k| key(k))),
+            None => open,
         }))
     }
 
@@ -532,12 +526,7 @@ pub(crate) mod tests {
     }
 
     pub(crate) fn measured() -> Outcome {
-        Outcome::Measured(vec![Measure {
-            metric: p99_ns(),
-            value: 1.0,
-            n: None,
-            mad: None,
-        }])
+        Outcome::measured(p99_ns(), 1.0).expect("finite")
     }
 
     fn declare(metrics: &[(&str, Metric)]) -> Event {
@@ -615,12 +604,8 @@ pub(crate) mod tests {
 
     #[test]
     fn a_measure_of_an_undeclared_metric_is_not_read() {
-        let undeclared = Outcome::Measured(vec![Measure {
-            metric: MetricName::parse("block.p50_ns").expect("metric"),
-            value: 1.0,
-            n: None,
-            mad: None,
-        }]);
+        let undeclared = Outcome::measured(MetricName::parse("block.p50_ns").expect("metric"), 1.0)
+            .expect("finite");
         let folded = fold(&note(&[
             line(0, open(Some(&["a"]))),
             result(1, "a", undeclared),
