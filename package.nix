@@ -6,7 +6,8 @@ in rustPlatform.buildRustPackage {
   inherit version;
   src = lib.fileset.toSource {
     root = ./.;
-    fileset = lib.fileset.unions [ ./Cargo.toml ./Cargo.lock ./rust-toolchain.toml ./crates ];
+    # The root README is a test input: the crate README must open as it does.
+    fileset = lib.fileset.unions [ ./Cargo.toml ./Cargo.lock ./rust-toolchain.toml ./README.md ./crates ];
   };
   cargoLock.lockFile = ./Cargo.lock;
   cargoBuildFlags = [ "--package" "git-evidence" ];
