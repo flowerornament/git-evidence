@@ -6,11 +6,9 @@ You record what a benchmark, a test suite or a CI step measured on a commit: a t
 
 Your records are kept in Git notes inside the repository. You share them with `git evidence push` and pick up other people's with `git evidence fetch`, and records from different clones merge without conflicts. Because records are filed under the commit's tree, numbers you measure on a branch still apply when that exact code lands.
 
-You can read the numbers with the built-in commands (`show`, `trend`, `diff`), which print plain rows. For anything else, git-evidence builds a SQLite database from the notes, and you, a script or a coding agent can query it with SQL. It never judges the numbers: you decide whether one got worse.
+You can read the numbers with the built-in commands (`show`, `trend`, `diff`), which print plain rows. For anything else, git-evidence builds a SQLite database from the notes, and you, a script or a coding agent can query it with SQL.
 
 You can use it to track a program's performance across commits, or to record how long each CI step takes so you can make your development loop faster, with evidence.
-
-You need nothing but Git: no server, and no files in your working tree.
 
 [docs/USAGE.md](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) in the repository shows a full setup, and explains why the numbers live in Git notes and not in a file.
 
