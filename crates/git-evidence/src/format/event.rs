@@ -165,33 +165,38 @@ pub struct Open {
 }
 
 impl Open {
-    /// An open about `commit`, by `producer` under `harness`, on `machine`; add
-    /// keys, metrics, parameters and a build through the public fields.
+    /// An open about `commit`, by `producer`, naming no harness and no
+    /// machine (both `""` on the wire). Name them with [`Self::harness`] and
+    /// [`Self::machine`]; add keys, metrics, parameters and a build through the
+    /// public fields.
     #[must_use]
-    pub fn new(
-        commit: CommitId,
-        producer: ProducerName,
-        harness: &str,
-        machine: &crate::format::id::Machine,
-    ) -> Self {
+    pub fn new(commit: CommitId, producer: ProducerName) -> Self {
         Self {
             commit,
             producer: Producer {
                 name: producer,
                 version: None,
             },
-            suite: Suite {
-                harness: harness.to_owned(),
-                ..Suite::default()
-            },
-            environment: Environment {
-                machine: machine.as_str().to_owned(),
-                ..Environment::default()
-            },
+            suite: Suite::default(),
+            environment: Environment::default(),
             build: Build::default(),
             keys: None,
             source: None,
         }
+    }
+
+    /// Run under `harness`, the version of what its values mean.
+    #[must_use]
+    pub fn harness(mut self, harness: impl Into<String>) -> Self {
+        self.suite.harness = harness.into();
+        self
+    }
+
+    /// Run on `machine`.
+    #[must_use]
+    pub fn machine(mut self, machine: crate::format::id::Machine) -> Self {
+        self.environment.machine = machine.into();
+        self
     }
 }
 
@@ -630,6 +635,28 @@ mod tests {
             keys: Some(vec![Key::parse("parse_large_d64").expect("key")]),
             source: None,
         }
+    }
+
+    #[test]
+    fn an_open_built_from_its_commit_and_producer_alone_names_no_harness_or_machine() {
+        let bare = Open::new(
+            CommitId::parse(&"c".repeat(40)).expect("commit"),
+            ProducerName::parse("bench-suite").expect("producer"),
+        );
+        assert_eq!(
+            (
+                bare.suite.harness.as_str(),
+                bare.environment.machine.as_str()
+            ),
+            ("", "")
+        );
+        let named = bare
+            .harness("bench-suite/7")
+            .machine(crate::format::id::Machine::parse("bench").expect("machine"));
+        let mut expected = open();
+        expected.producer.version = None;
+        expected.keys = None;
+        assert_eq!(named, expected);
     }
 
     #[test]

@@ -24,12 +24,9 @@ fn a_child_started_by_scratch_reads_the_scratch_store_and_nothing_else() {
         .expect("scratch");
     let evidence = scratch.evidence();
     let metric = MetricName::parse("block.p99_ns").expect("metric");
-    let mut open = Open::new(
-        scratch.landing(1),
-        "my-bench".parse().expect("producer"),
-        "my-bench/1",
-        &evidence.machine().expect("machine"),
-    );
+    let mut open = Open::new(scratch.landing(1), "my-bench".parse().expect("producer"))
+        .harness("my-bench/1")
+        .machine(evidence.machine().expect("machine"));
     open.keys = Some(vec!["parse_large".parse().expect("key")]);
     open.suite
         .metrics
@@ -74,12 +71,9 @@ fn a_store_without_a_trunk_still_records() {
         .status()
         .expect("git");
     let evidence = git_evidence::Evidence::open(scratch.path().join(".git"));
-    let mut open = Open::new(
-        scratch.landing(0),
-        "my-bench".parse().expect("producer"),
-        "my-bench/1",
-        &evidence.machine().expect("machine"),
-    );
+    let mut open = Open::new(scratch.landing(0), "my-bench".parse().expect("producer"))
+        .harness("my-bench/1")
+        .machine(evidence.machine().expect("machine"));
     open.keys = Some(Vec::new());
     let line = git_evidence::EventLine::new(
         git_evidence::RunId::new(),
@@ -103,9 +97,9 @@ fn recording_and_resuming_never_query_a_trunk() {
             git_evidence::CommitId::parse(&std::env::var("NOTES_ONLY_COMMIT").expect("commit"))
                 .expect("id"),
             "writer-test".parse().expect("producer"),
-            "writer-test/1",
-            &"laptop".parse().expect("machine"),
-        );
+        )
+        .harness("writer-test/1")
+        .machine("laptop".parse().expect("machine"));
         open.keys = Some(Vec::new());
         let mut line = git_evidence::EventLine::new(
             git_evidence::RunId::new(),
@@ -241,12 +235,9 @@ fn a_misspelt_derived_metric_is_an_unknown_name() {
         .and_then(|s| s.machine("laptop"))
         .expect("scratch");
     let evidence = scratch.evidence();
-    let mut open = Open::new(
-        scratch.landing(0),
-        "gates".parse().expect("producer"),
-        "gates/1",
-        &evidence.machine().expect("machine"),
-    );
+    let mut open = Open::new(scratch.landing(0), "gates".parse().expect("producer"))
+        .harness("gates/1")
+        .machine(evidence.machine().expect("machine"));
     open.keys = Some(vec!["fmt".parse().expect("key")]);
     let mut run = evidence.run(&kind("gates"), open).expect("open");
     let pass = git_evidence::VerdictStatus::Pass;

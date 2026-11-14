@@ -39,9 +39,9 @@ pub(crate) fn record_a_run(scratch: &Scratch) {
     let open = crate::format::event::Open::new(
         scratch.landing(0),
         crate::format::id::ProducerName::parse("tests").expect("producer"),
-        "tests/1",
-        &crate::format::id::Machine::parse("here").expect("machine"),
-    );
+    )
+    .harness("tests/1")
+    .machine(crate::format::id::Machine::parse("here").expect("machine"));
     scratch
         .evidence()
         .run(&crate::format::id::Kind::parse("perf").expect("kind"), open)

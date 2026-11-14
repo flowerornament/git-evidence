@@ -33,6 +33,30 @@ pub struct StartFailureRecord {
     pub retrying: bool,
 }
 
+impl StartFailureRecord {
+    /// The record of a start of `program` that failed with `error`, now and in
+    /// this process: what a launcher outside [`start`] writes, so every failed
+    /// start reads the same. `attempt` counts from 1; `retrying` says whether
+    /// another attempt follows.
+    #[must_use]
+    pub fn new(
+        program: impl Into<String>,
+        error: &io::Error,
+        attempt: usize,
+        retrying: bool,
+    ) -> Self {
+        Self {
+            time: crate::Timestamp::now(),
+            pid: std::process::id(),
+            attempt,
+            os_error: error.raw_os_error(),
+            error_kind: format!("{:?}", error.kind()),
+            program: program.into(),
+            retrying,
+        }
+    }
+}
+
 /// A process-local consumer of failed starts. Called synchronously before
 /// sleeping or refusing; it must not panic, recurse into this module, or block
 /// waiting for a child. Registration does not survive an exec.
@@ -108,15 +132,12 @@ fn attempts(
                     waits.next()
                 };
                 if let Some(observer) = observer {
-                    (observer.failed)(&StartFailureRecord {
-                        time: crate::Timestamp::now(),
-                        pid: std::process::id(),
+                    (observer.failed)(&StartFailureRecord::new(
+                        command.get_program().to_string_lossy(),
+                        &error,
                         attempt,
-                        os_error: error.raw_os_error(),
-                        error_kind: format!("{:?}", error.kind()),
-                        program: command.get_program().to_string_lossy().into_owned(),
-                        retrying: wait.is_some(),
-                    });
+                        wait.is_some(),
+                    ));
                 }
                 let Some(wait) = wait else {
                     return Err(GitError::Spawn(error));
@@ -152,6 +173,19 @@ mod tests {
     struct Other;
     impl StartObserver for Other {
         fn failed(_: &StartFailureRecord) {}
+    }
+
+    #[test]
+    fn a_record_built_outside_start_reads_like_one_start_writes() {
+        let error = io::Error::from_raw_os_error(22);
+        let record = StartFailureRecord::new("git", &error, 2, true);
+        assert_eq!(record.pid, std::process::id());
+        assert_eq!(
+            (record.program.as_str(), record.attempt, record.retrying),
+            ("git", 2, true)
+        );
+        assert_eq!(record.os_error, Some(22));
+        assert_eq!(record.error_kind, format!("{:?}", error.kind()));
     }
 
     #[test]

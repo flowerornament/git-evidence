@@ -379,7 +379,9 @@ use git_evidence::{End, Metric, MetricName, Open, Outcome};
 # let commit = scratch.landing(0);
 
 let p99 = MetricName::parse("latency.p99_ns")?;
-let mut open = Open::new(commit, "bench-suite".parse()?, "bench-suite/2", &evidence.machine()?);
+let mut open = Open::new(commit, "bench-suite".parse()?)
+    .harness("bench-suite/2")
+    .machine(evidence.machine()?);
 open.keys = Some(vec!["parser/parse_large".parse()?]);
 open.suite.metrics.insert(p99.clone(), Metric::lower("ns"));
 let mut run = evidence.run(&"perf".parse()?, open)?; // durable before any work
@@ -410,7 +412,7 @@ match evidence.at(|at| at.trend(&query)) {
 
 - `run.declare(Declaration::keys(…).metric(…))` names the keys and metrics a producer learns only once it has started, before any result. `run.result_at` records a result with the code site that produced it.
 - `run.finish()` writes the rest of a run (a late declaration, the results, close conditions, the close) as one all-or-nothing commit.
-- Outcomes and their parts have constructors: `Outcome::measured`, `Outcome::pass()`, `Outcome::fail()`, `Verdict::new(status, tries)` with `Try::new(status).duration_ms(…).cpu_ms(…)`, `Reason::new("timeout").detail(…)`, `Metric::lower("ns")`, `Measure::new(metric, value)?.n(20).mad(310.0)`; lines for `record` are `EventLine::new` with `Event::result`, `Event::close` or a `Declaration`. A query is its constructor with one method per filter: `TrendQuery::new(metric, key).machine(…).landings(Selector::newest(n))`.
+- An open needs only its commit and producer: `Open::new(commit, producer)`, with `.harness(…)` and `.machine(…)` when they are known; a run that names neither records `""` for both. Outcomes and their parts have constructors: `Outcome::measured`, `Outcome::pass()`, `Outcome::fail()`, `Verdict::new(status, tries)` with `Try::new(status).duration_ms(…).cpu_ms(…)`, `Reason::new("timeout").detail(…)`, `Metric::lower("ns")`, `Measure::new(metric, value)?.n(20).mad(310.0)`; lines for `record` are `EventLine::new` with `Event::result`, `Event::close` or a `Declaration`. A query is its constructor with one method per filter: `TrendQuery::new(metric, key).machine(…).landings(Selector::newest(n))`.
 - `evidence.resume(kind, &id)` finds a run after a crash.
 - `evidence.record(kind, &lines)` takes lines built elsewhere; it is `git evidence record`.
 - `evidence.at(|at| …)` asks questions in one read of the store, one method per verb, each taking its query (`TrendQuery`, `LogQuery`, `ShowQuery`, `KeysQuery`, `DiffQuery`). `at.overview(n)` lists the newest landings, including those without runs, each with its run counts; `at.log` lists the runs on a tree or on selected landings, `at.show` the runs a revision or a run id names, and `at.run(&id)` one run.

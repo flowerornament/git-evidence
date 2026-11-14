@@ -168,13 +168,13 @@ fn lines(
     let mut open = Open::new(
         commit.clone(),
         ProducerName::parse(if perf { "bench-suite" } else { "bench-checks" })?,
-        if perf {
-            "bench-suite/1"
-        } else {
-            "bench-checks/1"
-        },
-        &Machine::parse(MACHINE)?,
-    );
+    )
+    .harness(if perf {
+        "bench-suite/1"
+    } else {
+        "bench-checks/1"
+    })
+    .machine(Machine::parse(MACHINE)?);
     let mut results = Vec::new();
     if perf {
         open.suite

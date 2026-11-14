@@ -12,5 +12,5 @@ The first version, to be released as 0.1.0, together with `git-evidence` at the 
 - Typed object ids, validated where they are parsed.
 - `Timestamp`: a UTC time to the millisecond in its one wire spelling, `YYYY-MM-DDTHH:MM:SS.mmmZ`, parsed once where it is read; `StartFailureRecord::time` is one.
 - `start()`: starts a process, retrying a start the OS refused for lack of resources, and reports each failed attempt to an optional observer (`StartObserver`, installed once by `observe_start_failures`).
-- `GitError` and `StartFailureRecord` are `#[non_exhaustive]`, so a new error or a new field is not a breaking change.
+- `GitError` and `StartFailureRecord` are `#[non_exhaustive]`, so a new error or a new field is not a breaking change. `StartFailureRecord::new(program, &error, attempt, retrying)` builds one for a launcher outside `start()`, so every failed start is recorded in one form.
 - `testing::repo` (feature `testing`): a throwaway repository with one commit, for tests of Git readers.

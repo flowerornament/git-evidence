@@ -9,9 +9,7 @@
 use git_evidence::At;
 use git_evidence::Recorded;
 use git_evidence::{CommitId, Key, Kind, MetricName, ProducerName, RunId, TreeId};
-use git_evidence::{
-    Direction, End, Event, EventLine, Machine, Measure, Metric, Open, Outcome, Reason,
-};
+use git_evidence::{Direction, End, Event, EventLine, Measure, Metric, Open, Outcome, Reason};
 use git_evidence::{Error, Evidence};
 use git_process::TreeEntry;
 use std::process::Command;
@@ -321,9 +319,8 @@ pub fn open(commit: &CommitId, shape: &Shape, keys: &[&str]) -> Open {
     let mut open = Open::new(
         commit.clone(),
         ProducerName::parse(shape.producer).expect("producer"),
-        shape.harness,
-        &Machine::parse("bench").expect("machine"),
-    );
+    )
+    .harness(shape.harness);
     // As written, so a test can name no machine, which `Machine` refuses.
     shape.machine.clone_into(&mut open.environment.machine);
     open.environment.params = shape

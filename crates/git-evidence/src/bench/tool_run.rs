@@ -32,9 +32,9 @@ impl Bench<'_> {
         let mut open = Open::new(
             commit,
             ProducerName::parse("git-evidence").expect("a producer name"),
-            "git-evidence-bench/1",
-            machine,
-        );
+        )
+        .harness("git-evidence-bench/1")
+        .machine(machine.clone());
         open.producer.version = Some(env!("CARGO_PKG_VERSION").to_owned());
         let params = &mut open.suite.params;
         // The instrument, so every figure names it: the wall clock around one

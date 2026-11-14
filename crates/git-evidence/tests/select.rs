@@ -305,12 +305,9 @@ fn invalid_recorded_runs_are_no_runs_and_leave_the_landings_alone() {
     let evidence = scratch.evidence();
     let commit = scratch.landing(0);
     let kind: git_evidence::Kind = "gates".parse().expect("kind");
-    let open = git_evidence::Open::new(
-        commit,
-        "population-test".parse().expect("producer"),
-        "population-test/1",
-        &evidence.machine().expect("machine"),
-    );
+    let open = git_evidence::Open::new(commit, "population-test".parse().expect("producer"))
+        .harness("population-test/1")
+        .machine(evidence.machine().expect("machine"));
     let _run = evidence.run(&kind, open).expect("open run");
     let one = NonZeroU32::new(1).expect("1");
     let population = evidence.at(|at| at.overview(one)).expect("population");
