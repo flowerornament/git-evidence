@@ -1,7 +1,7 @@
 //! The manual: `git-evidence.1` and one `git-evidence-<verb>.1` per verb,
 //! rendered from the command line's grammar (`args.rs`), so a page can never
-//! say what `--help` does not. The hidden `manual DIR` verb writes them; put
-//! in a `man1` directory on the manual path, they are what `git evidence
+//! say what `--help` does not. The `manual DIR` verb writes them;
+//! installed in a `man1` directory on the manual path, they are what `git evidence
 //! --help` shows: Git answers `git <command> --help` with
 //! `man git-<command>`.
 //!

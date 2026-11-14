@@ -138,9 +138,15 @@ pub enum Verb {
         #[arg(long)]
         dry_run: bool,
     },
-    /// Write the manual pages into DIR, for the installer.
-    #[command(hide = true)]
-    Manual { dir: std::path::PathBuf },
+    /// Write the manual pages into DIR.
+    ///
+    /// The pages are git-evidence.1 and one git-evidence-VERB.1 per verb.
+    /// Installed in a man1 directory on the manual path, they are what `git
+    /// evidence --help` shows.
+    Manual {
+        /// An existing directory, such as ~/.local/share/man/man1.
+        dir: std::path::PathBuf,
+    },
 }
 
 /// What `bench` measures, and where its run goes.

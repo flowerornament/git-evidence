@@ -14,7 +14,7 @@ You can use it to track a program's performance across commits, or to record how
 
 ## Example
 
-From the crate's [quick start](crates/git-evidence/README.md#quick-start), two runs of a benchmark on two commits:
+From the crate's [quick start](crates/git-evidence/README.md#quick-start), two runs of a benchmark on two commits. A landing is a commit on the trunk (the main branch, by first parent); the `landing` column numbers them from the oldest, `0` first:
 
 ```console
 $ git evidence trend latency.p99_ns parse_large
@@ -53,7 +53,7 @@ cargo install git-evidence
 git evidence -h
 ```
 
-Git 2.42 or later is required, and Rust 1.91 or later to build. Installing the binary is enough for Git, which runs any `git-<name>` on `PATH` as `git <name>`; the crate README says how to install the manual pages and how to use it from jj.
+Git 2.42 or later is required (the crate README's Install says why), and Rust 1.91 or later to build. Installing the binary is enough for Git, which runs any `git-<name>` on `PATH` as `git <name>`; the crate README says how to install the manual pages and how to use it from jj.
 
 ## Status
 

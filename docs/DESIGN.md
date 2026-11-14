@@ -1,4 +1,3 @@
-
 # git-evidence: the design
 
 git-evidence keeps what a producer measured on a commit (a time, a byte count, a pass or a fail, or why it could not measure) in Git notes beside the code, merges stores without conflicts, and prints the numbers back as rows. It is a standalone, project-agnostic crate: `crates/git-evidence/` depends on Git, through `crates/git-process/`, and on no project that uses it.
@@ -53,7 +52,7 @@ lines ─► check each line ─► find each run's tree ─► take kind lock �
 - **Refusals.** A refused batch writes nothing and names its rule and remedy: `Refusal` (`crates/git-evidence/src/write/refusal.rs`): another envelope version, a time in another form, a non-finite number, a negative wall or CPU time, an unknown commit, a run on another tree, events with no open, resuming an unrecorded or ended run, over budget, and the grammar and metric rules (`Problem`: undeclared or redefined metric, a declare after a result, a declared `verdict.` metric, a second result, anything after close, a `seq` gap, a bad machine name, …).
 - **Metrics are declared once.** A measure carries only metric, value, `n` and `mad`; its unit and direction are the run's declaration, so a unit is never guessed. `verdict.<status>.duration_ms` and `.cpu_ms` are reserved: the index derives them from verdict tries (`origin = derived`).
 - **Budgets.** `evidence.<kind>.budget` caps one run's bytes; unset is no budget, and an unreadable value is an error, never "no budget" (`Store::budget` in `crates/git-evidence/src/store.rs`).
-- **Machine.** Recording through the Rust API needs `evidence.machine`; the store, not the producer, says where it runs.
+- **Machine.** A run's machine is what its `open` names, or none; it is never taken from the host name. Git config `evidence.machine` is the store's own machine name: `Evidence::machine` reads it for a Rust producer to name on its `Open`, `bench --returned` names it on its run, and `audit` treats it as public.
 
 ## 4. Sharing
 
@@ -96,7 +95,7 @@ write   record KIND · fetch · push [--dry-run] · audit · bench
 
 ## 7. Left out on purpose
 
-- **Verdicts.** No `regressed`, `owed`, `status`, bounds, judges, expectations, facts check or `evidence/config.toml`; no answer envelope (pin, coverage, caveats, found/partial/empty/unavailable, exit 3); no `--json`; no trend summary. Whether a number got worse is a policy, and policy belongs to the project that holds it, as queries or scripts over the rows. One machine format (CSV) cannot drift from a second. Versions developed before the first release judged (regressions, bounds, expectations); every such judgement embedded one project's policy in a shared tool and had to be explained by caveats, so 0.1.0 ships the rows alone.
+- **Verdicts.** The tool judges no number: no regression verdicts, thresholds or trend summary, and no `--json`. Whether a number got worse is a policy, and policy belongs to the project that holds it, as queries or scripts over the rows. One machine format (CSV) cannot drift from a second.
 - **Choosing silently.** Where `diff` needs one number per side it takes the newest complete run of the series and names the run and the count it chose from.
 - **Retention.** A landing's tree is kept alive by the trunk; a candidate's note may outlive its tree.
 - **Raw bodies, running, serving.** A run's `source` names an original record; the producer keeps its own raw output. git-evidence is not a runner or a server.

@@ -1,7 +1,12 @@
-//! Numbers recorded per Git commit, kept in Git notes, and read back as rows. The README below is the whole contract.
+//! Numbers recorded per Git commit, kept in Git notes, and read back as rows.
 //!
-//! The crate root is the whole Rust API: every module is private, and
-//! `tests/contract.rs` pins the exported names.
+//! The README below is the manual: the model, every verb and column, the
+//! settings, and the Rust API by example. The event lines, the notes layout
+//! and the public SQL views are specified normatively in
+//! [`docs/FORMAT.md`](https://github.com/flowerornament/git-evidence/blob/main/docs/FORMAT.md).
+//!
+//! The crate root is the whole Rust API, with the `testing` module behind its
+//! feature; `tests/contract.rs` pins the exported names.
 //!
 //! A run is written through one type and read back through others, each
 //! shaped for its question:
@@ -15,8 +20,6 @@
 //! LogEntry    one run listed (log): how it ended and how many keys each outcome has
 //! RunCount    how many runs of one kind a landing's tree has, refused ones apart (overview)
 //! RunValue    one side of a diff row: the newest run's number, and how many runs had it
-//! RunState    a run folded from its note's lines (testing, behind the feature)
-//! RunLocator  inside the crate: where a recorded run lives, asked before appending to it
 //! ```
 #![doc = include_str!("../README.md")]
 

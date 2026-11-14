@@ -34,7 +34,7 @@ Numbers MUST be finite: JSON has no NaN or infinity, and a producer that cannot 
 | digest       | `sha256:` and 64 lowercase hex digits                                                                   | `sha256:5d0b…`                   |
 | commit       | a full Git object id: 40 (SHA-1) or 64 (SHA-256) lowercase hex digits                                  |                                  |
 
-A machine is a name the store's owner declares (Git config `evidence.machine`), not necessarily a host name: whatever is recorded is published by `push`.
+A machine names where a run executed, as its producer gives it (a store declares its own in Git config `evidence.machine`), not necessarily a host name: whatever is recorded is published by `push`.
 
 ### `open`
 
@@ -181,7 +181,7 @@ The index (`<git-common-dir>/evidence/index-v<views>-<source>.sqlite`) is a cach
 - Only readable runs appear (section 2); an open run appears in `runs` with `closed` and `ended` NULL and gives no measures.
 - `variant` is a digest of what must match for two values to be compared: kind, producer, harness, suite params, build profile, machine and environment params. It is derived by the index under its views version; producers never compute it.
 - `measures` with `origin = 'derived'` are the verdict times `verdict.<status>.duration_ms` and `verdict.<status>.cpu_ms` (unit `ms`, lower is better), present only when every try of the verdict has that time.
-- Times are text in the forms above and sort as text. Booleans are 0 or 1.
+- Times are text in the forms above and sort as text.
 
 The column list of every schema version is pinned, one section per version, in [`crates/git-evidence/tests/public_schema.snap`](../crates/git-evidence/tests/public_schema.snap); a test fails if the views drift from it.
 

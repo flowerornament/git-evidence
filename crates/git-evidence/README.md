@@ -10,7 +10,7 @@ You can read the numbers with the built-in commands (`show`, `trend`, `diff`), w
 
 You can use it to track a program's performance across commits, or to record how long each CI step takes so you can make your development loop faster, with evidence.
 
-[docs/USAGE.md](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) in the repository shows a full setup, and explains why the numbers live in Git notes and not in a file.
+[`docs/USAGE.md`](https://github.com/flowerornament/git-evidence/blob/main/docs/USAGE.md) shows a full setup, and explains why the numbers live in Git notes and not in a file.
 
 ```text
 commits:                   C1 ───── C2 ───── C3 ───── C4 ──►      each with a tree
@@ -30,7 +30,7 @@ cargo install git-evidence             # or, from a checkout of this crate: carg
 git evidence --help
 ```
 
-Git 2.42 or later is required. `git evidence --help` opens the manual once its pages are installed (Revisions, jj and the manual, below).
+Git 2.42 or later is required. `record` appends to a note with `git notes append --no-separator --no-stripspace`, which keeps the lines byte for byte, and Git 2.42 added both options. `git evidence --help` opens the manual once its pages are installed (Revisions, jj and the manual, below).
 
 ## Quick start
 
@@ -39,7 +39,6 @@ In a new repository, record one run of a benchmark suite on the first commit, a 
 ```console
 $ git init -q -b main
 $ echo 'fn parse() {}' > parser.rs && git add parser.rs && git commit -q -m "parser: first version"
-$ git config evidence.machine laptop
 $ git evidence record perf <<EOF
 {"v":2,"run":"01JA8Z3K4M0000000000000000","seq":0,"time":"2026-10-08T03:10:02.123Z","event":"open","commit":"$(git rev-parse HEAD)","producer":{"name":"bench-suite"},"suite":{"harness":"bench-suite/2","params":{"repeats":20},"metrics":{"latency.p99_ns":{"unit":"ns","better":"lower"}}},"environment":{"machine":"laptop"},"keys":["parse_large","parse_small"]}
 {"v":2,"run":"01JA8Z3K4M0000000000000000","seq":1,"time":"2026-10-08T03:10:09.500Z","event":"result","key":"parse_large","outcome":{"measured":[{"metric":"latency.p99_ns","value":88634,"n":20,"mad":310}]}}
@@ -90,7 +89,7 @@ landing,key,value
 1,parse_large,80412
 ```
 
-A run is event lines: `open` names the commit, the suite and its metrics (each with a unit and which direction is better), each `result` records one key's outcome, and `close` ends the run. Recording Runs, below, has the grammar. `git evidence` with no verb lists the newest landings, oldest first: the commits on the trunk's first-parent line, numbered from the oldest.
+A run is event lines: `open` names the commit, the suite and its metrics (each with a unit and which direction is better), each `result` records one key's outcome, and `close` ends the run. Recording runs, below, has the grammar. `git evidence` with no verb lists the newest landings, oldest first: the commits on the trunk's first-parent line, numbered from the oldest.
 
 ## Reading
 
@@ -136,38 +135,9 @@ The overview has one column per kind recorded on the landings it lists (its run 
 
 **Exit status.** 0: the rows were printed (the header alone when no row matched). 1: the command could not run: a malformed command, a revision that does not resolve, no trunk, a store it cannot read; standard error says why. 2: nothing is recorded for what the command named (a key, a metric, a run, a revision with no run, a range end that is not a landing); standard output is empty and standard error names it with the nearest recorded names. A refused `record`, `fetch` or `push`, and an `audit` with findings, also exit 2.
 
-## The model
-
-| Noun        | Is                                                                                                                                                                   |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| commit      | what a producer ran on. A run names it; its tree is what the run is about.                                                                                           |
-| tree        | the code, as a Git tree id. Evidence is about trees: a candidate that lands unchanged has the landing's tree, so it carries its evidence with it.                     |
-| trunk       | the ref whose first-parent line is the landings (default: `origin/HEAD`'s target).                                                                                   |
-| landing     | a commit on the trunk's first-parent line. Landings are numbered from the oldest, `0` first.                                                                         |
-| kind        | what a piece of evidence is: `perf`, `tests`, `checks`. The namespace readers select by; one notes ref each.                                                         |
-| run         | one execution of a producer, about one tree, identified by a [ULID](https://github.com/ulid/spec).                                                                   |
-| machine     | where a run executed, by the name the store's Git config gives it (`evidence.machine`).                                                                              |
-| key         | one thing a run answers: a benchmark, a test, a check step, named as its producer names it (1–1024 bytes, no control characters, no surrounding whitespace).                                    |
-| metric      | a named quantity a run declares once, with its unit and, optionally, which direction is better.                                                                     |
-| outcome     | a key's result: `measured`, `verdict`, `refused` or `skipped` (below).                                                                                               |
-| variant     | what must match for two values to be matched by `diff`: kind, producer, harness, suite params, build profile, machine, environment params. Derived; producers never hash. |
-
-Nothing else has an identity: there are no writer names, store ids or method hashes. The tree is the subject, the run id is the evidence, and the kind is the namespace.
-
-### Outcomes
-
-| Outcome           | Means                                                                                                    |
-| ----------------- | -------------------------------------------------------------------------------------------------------- |
-| `measured`        | values, each with a declared metric, optional `n` (samples) and `mad` (median absolute deviation)        |
-| `verdict`         | `pass`, `fail` or `timeout`, with the individual `tries`, each with its wall and CPU times if recorded   |
-| `refused{reason}` | no value; retrying may succeed (`noisy_host`, `timeout`, `disk_low`, `interrupted`)                      |
-| `skipped{reason}` | no value, and none is possible at this code (`build_failed`, `compile_error`)                            |
-
-A try carries `status` and, when recorded, `duration_ms` (wall time) and `cpu_ms` (CPU time: user plus system time of the process that ran the try and the descendants it waited for, in milliseconds). An absent time was not recorded; it is never zero. Both are finite and not negative, and `cpu_ms` may exceed `duration_ms` when the work ran in parallel.
-
-The index derives each time as a metric per status, the sum over the verdict's tries: `verdict.<status>.duration_ms` and `verdict.<status>.cpu_ms` for `pass`, `fail` and `timeout` (unit `ms`, lower is better). A time is derived only when every try of the verdict has it and the sum is finite. A run cannot declare a metric under `verdict.`.
-
 ## SQL
+
+The nouns in these views (run, outcome, variant, machine) are defined in The model, below.
 
 `git evidence sql "<query>"` brings the index up to date with the notes and the trunk, then runs one statement that reads rows on a read-only connection, in one snapshot. It prints the rows as CSV (a header, then one line per row; NULL is an empty field), and nothing on standard error. A statement that writes, or that returns no rows, is refused, and so are two columns of one name. `git evidence sql --path` refreshes the index and prints its file's path, for `sqlite3` or DuckDB. A reader that opens that file in another tool holds none of `git-evidence`'s locks, so another build may remove the file from under that reader once the file has gone unused for an hour or a day (Storage, below); copy the file to keep it for longer.
 
@@ -188,7 +158,7 @@ A column is named as the other verbs' columns name the same value: `run`, `tree`
 | `verdicts` | verdict                        | `run`, `key`, `status`, `duration_ms`, `cpu_ms` (sums over the tries; NULL unless every try has one), `tries` |
 | `outcomes` | key a run answered             | `run`, `key`, `outcome` (`measured`, `verdict`, `refused`, `skipped`), `status`, `reason`, `detail`, `location` |
 
-Booleans are 0 or 1. Filter landings by `landing` and `date`. These examples run as tests against a fixture store (`tests/readme_sql.rs`):
+Filter landings by `landing` and `date`. These examples run as tests against a fixture store (`tests/readme_sql.rs`):
 
 ```sql
 -- ours against the reference per key, in the newest complete run on laptop that measured ours
@@ -224,6 +194,37 @@ WHERE l.date >= '2026-10-01' AND l.date < '2026-11-01'
   AND o.outcome IN ('refused', 'skipped')
 ORDER BY l.landing, o.key;
 ```
+
+## The model
+
+| Noun        | Is                                                                                                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| commit      | what a producer ran on. A run names it; its tree is what the run is about.                                                                                           |
+| tree        | the code, as a Git tree id. Evidence is about trees: a candidate that lands unchanged has the landing's tree, so it carries its evidence with it.                     |
+| trunk       | the ref whose first-parent line is the landings (default: `origin/HEAD`'s target).                                                                                   |
+| landing     | a commit on the trunk's first-parent line. Landings are numbered from the oldest, `0` first.                                                                         |
+| kind        | what a piece of evidence is: `perf`, `tests`, `checks`. The namespace readers select by; one notes ref each.                                                         |
+| run         | one execution of a producer, about one tree, identified by a [ULID](https://github.com/ulid/spec).                                                                   |
+| machine     | where a run executed, as its `open` names it (`environment.machine`); a run may name none.                                                                           |
+| key         | one thing a run answers: a benchmark, a test, a check step, named as its producer names it (1–1024 bytes, no control characters, no surrounding whitespace).                                    |
+| metric      | a named quantity a run declares once, with its unit and, optionally, which direction is better.                                                                     |
+| outcome     | a key's result: `measured`, `verdict`, `refused` or `skipped` (below).                                                                                               |
+| variant     | what must match for two values to be matched by `diff`: kind, producer, harness, suite params, build profile, machine, environment params. Derived; producers never hash. |
+
+Nothing else has an identity: there are no writer names, store ids or method hashes. The tree is the subject, the run id is the evidence, and the kind is the namespace.
+
+### Outcomes
+
+| Outcome           | Means                                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| `measured`        | values, each with a declared metric, optional `n` (samples) and `mad` (median absolute deviation)        |
+| `verdict`         | `pass`, `fail` or `timeout`, with the individual `tries`, each with its wall and CPU times if recorded   |
+| `refused{reason}` | no value; retrying may succeed (`noisy_host`, `timeout`, `disk_low`, `interrupted`)                      |
+| `skipped{reason}` | no value, and none is possible at this code (`build_failed`, `compile_error`)                            |
+
+A try carries `status` and, when recorded, `duration_ms` (wall time) and `cpu_ms` (CPU time: user plus system time of the process that ran the try and the descendants it waited for, in milliseconds). An absent time was not recorded; it is never zero. Both are finite and not negative, and `cpu_ms` may exceed `duration_ms` when the work ran in parallel.
+
+The index derives each time as a metric per status, the sum over the verdict's tries: `verdict.<status>.duration_ms` and `verdict.<status>.cpu_ms` for `pass`, `fail` and `timeout` (unit `ms`, lower is better). A time is derived only when every try of the verdict has it and the sum is finite. A run cannot declare a metric under `verdict.`.
 
 ## Writing
 
@@ -291,53 +292,7 @@ Every other condition (`load`, or a project's own such as `verified_base`) is ke
 
 **Sources.** An `open` may name its `source`: the original record the run imports (an id, an immutable path or a digest), never where a copy was found. It is kept as provenance; each run is its own row.
 
-## Benchmark
-
-`git evidence bench` is the tool's own benchmark. It times this binary answering on a store in a temporary directory, so the store in use is never written, and its index is never rebuilt or locked:
-
-- by default, a store generated at a declared size (`--landings`, default 5,000; `--runs`, default 10,000, half perf runs of 16 measured keys and half checks runs of 8 verdicts, spread evenly), the same store on every machine;
-- with `--this-store`, a copy of this store: its evidence refs and its trunk, reading its objects through Git alternates.
-
-Its output, one row per figure:
-
-```text
-$ git evidence bench
-verb      metric   value  unit  n  mad  outcome   detail
-overview  cold_ms   <ms>  ms    1    0  measured
-overview  warm_ms   <ms>  ms    5 <ms>  measured
-trend     warm_ms   <ms>  ms    5 <ms>  measured
-sql       warm_ms   <ms>  ms    5 <ms>  measured
-record    warm_ms   <ms>  ms    5 <ms>  measured
-```
-
-Each figure is the wall time of one process of this binary, process start included: what a person typing the command waits for. **Cold** is the overview with no index, the rebuild every verb pays first. **Warm** is each verb run once untimed, then `--repeats` times (default 5), as the median and its median absolute deviation: the overview, `trend` of the first metric and key the newest landing's runs measured, `sql` of a reference query, and `record` of one perf run of 16 keys on the newest landing. A verb that cannot answer (exit 1, or a `record` refused) is reported failed, naming why; every other exit of a question is an answer.
-
-`--returned PATH --on REV` also writes the figures to PATH as one run of kind `tool` about REV (the code whose `git-evidence` was measured), on this store's machine, opened before the work as a producer's run is: `git evidence record tool < PATH` records it. Its keys are the verbs (metrics `cold_ms`, `warm_ms`) and `store` (metrics `landings`, `runs`); a verb that failed is `refused` `answer_failed`, and a bench that cannot measure closes the run `refused` `bench_failed`. Its parameters are `store` (`generated` or `existing`), `repeats` and, generated, `landings` and `runs`, and the instrument: `clock = wall`, `process_start = included`, `compile = excluded` and `profile` (`debug` or `release`); so only figures of one store, size and instrument share a variant. Read them back with `trend` or `sql` like any other numbers.
-
-The generated store's notes are written in bulk with `git fast-import`, not through `record`; a test (`src/bench/generate.rs`) checks that they are the bytes `record` writes for the same runs.
-
-## Storage
-
-```text
-refs/notes/evidence/<kind>                                 one note per tree: every run's lines; written here, pushed
-refs/notes/remotes/<remote>/evidence/<kind>                fetched copies; never branches or bookmarks
-<git-common-dir>/evidence/index-v<views>-<source>.sqlite   the disposable index of one build, with its .sqlite.lock
-<git-common-dir>/evidence/locks/                           one lock per notes ref, and one for fetch and push
-```
-
-```text
-$ git notes --ref evidence/perf show 'HEAD^{tree}'
-{"v":2,"run":"01JA8Z3K4M0000000000000000","seq":0,"time":"2026-10-08T03:10:02.123Z","event":"open",…}
-{"v":2,"run":"01JA8Z3K4M0000000000000000","seq":1,"time":"2026-10-08T03:10:09.500Z","event":"result",…}
-```
-
-- **Notes are keyed by tree id** in Git's own fanout layout, so an append costs the same at 10 or 100,000 notes.
-- **One ref per kind, shared by every writer.** Events are immutable and unique, so a note is a set of lines. Stores that appended concurrently are reconciled with `git notes merge -s cat_sort_uniq`, which is exactly set union: nothing conflicts and nothing is forced. Within one store, writers serialise on a lock file.
-- **Line order inside a note is irrelevant.** The fold orders each run by `seq`.
-- **The index is a cache.** On each question it compares the refs' tips with those it last read and re-folds only the notes that changed. It is safe to delete. Each build of `git-evidence` (views version and source) has its own file, so binaries built from different source sharing a store never rebuild each other's file or wait on its lock; a new file removes another build's file only when no connection can have it open (its `.sqlite.lock` taken without waiting, or, for a file an older binary made, no `-wal` or `-shm`), and only once it has gone unused for a day, or for an hour while three more recently used ones are kept. A binary's first question folds its file from the notes, in one write transaction, so a reader of the file sees no partial fold: about 1.7 s on the generated 5,000-landing store and 4 to 6 s on a 4,636-landing store in use (Mac laptop, wall time, load 15 to 20, release, 2026-11-02). Other processes of that build asking meanwhile wait on the file's lock, for at most 30 s. `record` folds only the notes it needs to find runs and leaves the landings to the next answer.
-- **No retention.** A landing's tree is kept alive by the trunk. A candidate that never landed may have its tree collected; its note survives, unreachable from any landing.
-
-### Sharing
+## Sharing
 
 `fetch` copies each kind's ref into `refs/notes/remotes/<remote>/evidence/<kind>` and union-merges it into the local ref. `push` asks the remote what each kind's ref holds and sends only what it lacks: a ref the remote holds at this store's commit costs nothing. If the remote holds evidence this store has not merged (another store pushed first), it fetches, merges and tries again, up to three times. Git never prompts; a remote that asks for credentials refuses.
 
@@ -349,12 +304,12 @@ Store settings are Git config, never files in the tree; all but `evidence.remote
 
 | Setting                  | Means                                                                         | Default            |
 | ------------------------ | ----------------------------------------------------------------------------- | ------------------ |
-| `evidence.machine`       | the machine this store's producers run on; required to record from Rust       | none               |
+| `evidence.machine`       | this store's own machine name (below)                                         | none               |
 | `evidence.remote`        | the remote `fetch` and `push` use                                             | `origin`           |
 | `evidence.<kind>.budget` | the most bytes one run of that kind may take                                  | no budget          |
 | `evidence.push`          | `true` allows `push`                                                          | refused until true |
 
-A producer that records its real host name as its machine declares that host name public.
+A run's machine is the one its `open` names, or none; `record` never reads `evidence.machine`. A Rust producer can name the store's machine on its `Open` with `Evidence::machine`, and `bench --returned` names it on its run. A producer that records its real host name as its machine declares that host name public.
 
 ## Revisions, jj and the manual
 
@@ -364,7 +319,7 @@ Installing the binary is enough for Git: Git runs any `git-<name>` on `PATH` as 
 jj config set --repo aliases.evidence '["util", "exec", "--", "git-evidence"]'
 ```
 
-A `REV` is a Git revision. Inside a jj workspace it is a jj revset first; a revision jj cannot resolve (`HEAD`, `HEAD~2`, `origin/main`) is read as a Git revision of the store, with `HEAD` meaning the workspace's `@-` (the shared store's own `HEAD` names another workspace's checkout, so it is never read). A `RUN` is a run id. The tool finds the shared Git store from any working directory; a jj workspace without `.git` follows `.jj/repo` to its store's `git_target`. `GIT_EVIDENCE_GIT_DIR` overrides discovery. Shallow and partial clones are refused: evidence needs the history and the note blobs locally. Git 2.42 or later is required.
+A `REV` is a Git revision. Inside a jj workspace it is a jj revset first; a revision jj cannot resolve (`HEAD`, `HEAD~2`, `origin/main`) is read as a Git revision of the store, with `HEAD` meaning the workspace's `@-` (the shared store's own `HEAD` names another workspace's checkout, so it is never read). A `RUN` is a run id. The tool finds the shared Git store from any working directory; a jj workspace without `.git` follows `.jj/repo` to its store's `git_target`. `GIT_EVIDENCE_GIT_DIR` overrides discovery. Shallow and partial clones are refused: evidence needs the history and the note blobs locally.
 
 **The manual.** `git evidence --help` is Git asking `man git-evidence`. The binary renders its pages from its own command line, so they say what `-h` says: `git-evidence manual DIR` writes `git-evidence.1` and one `git-evidence-<verb>.1` per verb; put them in a `man1` directory on the manual path (`manpath` lists it), such as `~/.local/share/man/man1` beside `~/.local/bin`. `git evidence <verb> --help` is the binary's own help, and `--help` (unlike `-h`) ends with the exit status.
 
@@ -421,6 +376,52 @@ match evidence.at(|at| at.trend(&query)) {
 - `evidence.sql(query)` returns `Rows`, the rows of one read-only query (SQL, above).
 - `git_evidence::testing::Scratch` (feature `testing`) gives an integration's tests a throwaway repository, as these examples use.
 - The `bench` feature, on by default and needed by the binary, carries the `bench` verb's types; a library user can leave it out with `default-features = false`.
+
+## Benchmark
+
+`git evidence bench` is the tool's own benchmark. It times this binary answering on a store in a temporary directory, so the store in use is never written, and its index is never rebuilt or locked:
+
+- by default, a store generated at a declared size (`--landings`, default 5,000; `--runs`, default 10,000, half perf runs of 16 measured keys and half checks runs of 8 verdicts, spread evenly), the same store on every machine;
+- with `--this-store`, a copy of this store: its evidence refs and its trunk, reading its objects through Git alternates.
+
+Its output, one row per figure:
+
+```text
+$ git evidence bench
+verb      metric   value  unit  n  mad  outcome   detail
+overview  cold_ms   <ms>  ms    1    0  measured
+overview  warm_ms   <ms>  ms    5 <ms>  measured
+trend     warm_ms   <ms>  ms    5 <ms>  measured
+sql       warm_ms   <ms>  ms    5 <ms>  measured
+record    warm_ms   <ms>  ms    5 <ms>  measured
+```
+
+Each figure is the wall time of one process of this binary, process start included: what a person typing the command waits for. **Cold** is the overview with no index, the rebuild every verb pays first. **Warm** is each verb run once untimed, then `--repeats` times (default 5), as the median and its median absolute deviation: the overview, `trend` of the first metric and key the newest landing's runs measured, `sql` of a reference query, and `record` of one perf run of 16 keys on the newest landing. A verb that cannot answer (exit 1, or a `record` refused) is reported failed, naming why; every other exit of a question is an answer.
+
+`--returned PATH --on REV` also writes the figures to PATH as one run of kind `tool` about REV (the code whose `git-evidence` was measured), on this store's machine, opened before the work as a producer's run is: `git evidence record tool < PATH` records it. Its keys are the verbs (metrics `cold_ms`, `warm_ms`) and `store` (metrics `landings`, `runs`); a verb that failed is `refused` `answer_failed`, and a bench that cannot measure closes the run `refused` `bench_failed`. Its parameters are `store` (`generated` or `existing`), `repeats` and, generated, `landings` and `runs`, and the instrument: `clock = wall`, `process_start = included`, `compile = excluded` and `profile` (`debug` or `release`); so only figures of one store, size and instrument share a variant. Read them back with `trend` or `sql` like any other numbers.
+
+The generated store's notes are written in bulk with `git fast-import`, not through `record`; a test (`src/bench/generate.rs`) checks that they are the bytes `record` writes for the same runs.
+
+## Storage
+
+```text
+refs/notes/evidence/<kind>                                 one note per tree: every run's lines; written here, pushed
+refs/notes/remotes/<remote>/evidence/<kind>                fetched copies; never branches or bookmarks
+<git-common-dir>/evidence/index-v<views>-<source>.sqlite   the disposable index of one build, with its .sqlite.lock
+<git-common-dir>/evidence/locks/                           one lock per notes ref, and one for fetch and push
+```
+
+```text
+$ git notes --ref evidence/perf show 'HEAD^{tree}'
+{"v":2,"run":"01JA8Z3K4M0000000000000000","seq":0,"time":"2026-10-08T03:10:02.123Z","event":"open",…}
+{"v":2,"run":"01JA8Z3K4M0000000000000000","seq":1,"time":"2026-10-08T03:10:09.500Z","event":"result",…}
+```
+
+- **Notes are keyed by tree id** in Git's own fanout layout, so an append costs the same at 10 or 100,000 notes.
+- **One ref per kind, shared by every writer.** Events are immutable and unique, so a note is a set of lines. Stores that appended concurrently are reconciled with `git notes merge -s cat_sort_uniq`, which is exactly set union: nothing conflicts and nothing is forced. Within one store, writers serialise on a lock file.
+- **Line order inside a note is irrelevant.** The fold orders each run by `seq`.
+- **The index is a cache.** On each question it compares the refs' tips with those it last read and re-folds only the notes that changed. It is safe to delete. Each build of `git-evidence` (views version and source) has its own file, so binaries built from different source sharing a store never rebuild each other's file or wait on its lock; a new file removes another build's file only when no connection can have it open (its `.sqlite.lock` taken without waiting, or, for a file an older binary made, no `-wal` or `-shm`), and only once it has gone unused for a day, or for an hour while three more recently used ones are kept. A binary's first question folds its file from the notes, in one write transaction, so a reader of the file sees no partial fold: about 1.7 s on the 5,000-landing store `bench` generates (a release build on a Mac laptop, wall time, 2026-11-02). Other processes of that build asking meanwhile wait on the file's lock, for at most 30 s. `record` folds only the notes it needs to find runs and leaves the landings to the next answer.
+- **No retention.** A landing's tree is kept alive by the trunk. A candidate that never landed may have its tree collected; its note survives, unreachable from any landing.
 
 ## Guarantees
 

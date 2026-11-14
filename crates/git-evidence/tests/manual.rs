@@ -1,7 +1,7 @@
 //! The manual is rendered from the command line itself: every verb `--help`
-//! lists has its own page and an entry on the root page, the hidden `manual`
-//! verb has neither, and the root page carries the exit status `--help`
-//! prints (`src/cli/manual.rs`).
+//! lists has its own page and an entry on the root page, `manual` among them,
+//! and the root page carries the exit status `--help` prints
+//! (`src/cli/manual.rs`).
 
 use std::process::Command;
 
@@ -43,6 +43,10 @@ fn every_verb_the_command_line_lists_has_a_page_and_the_root_page_names_it() {
     assert!(
         verbs.len() >= 10,
         "the verbs were read from --help: {verbs:?}"
+    );
+    assert!(
+        verbs.iter().any(|verb| verb == "manual"),
+        "--help lists the manual verb: {verbs:?}"
     );
     let root = std::fs::read_to_string(dir.path().join("git-evidence.1")).expect("the root page");
     for verb in &verbs {
