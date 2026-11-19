@@ -26,11 +26,12 @@
       });
       checks = eachSystem (system: { package = self.packages.${system}.default; });
       # Everything `just check` needs: the pinned toolchain, Git (2.42 or later),
-      # jj (the revision tests drive jj workspaces) and just.
+      # jj (the revision tests drive jj workspaces), just, and a system SQLite
+      # with pkg-config to find it (the gate also tests without bundled-sqlite).
       devShells = eachSystem (system:
         let pkgs = pkgsFor system; in {
           default = pkgs.mkShell {
-            packages = [ (rustFor pkgs) pkgs.git pkgs.jujutsu pkgs.just ];
+            packages = [ (rustFor pkgs) pkgs.git pkgs.jujutsu pkgs.just pkgs.sqlite pkgs.pkg-config ];
             # Git never discovers a repository above the checkout (a stray ~/.git).
             shellHook = ''export GIT_CEILING_DIRECTORIES="$(dirname "$PWD")"'';
           };

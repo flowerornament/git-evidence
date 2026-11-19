@@ -4,6 +4,16 @@ All notable changes to `git-evidence` are recorded here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- **`RunId::from_parts(millis, random)`**, the ULID of a time and 80 random bits, with no hashing, for a producer whose runs already carry unique bits (another tool's run id). `RunId::derived` is `from_parts` of the hashed source, and its ids are unchanged.
+- **The `bundled-sqlite` feature**, on by default. Turned off, the index links the system's libsqlite3, 3.38 or later; an older one is refused with `IndexError::OldSqlite`.
+
+### Changed
+
+- **`default-features = false` also leaves out the bundled SQLite.** A library that turns the defaults off links the system's libsqlite3 unless it adds `features = ["bundled-sqlite"]`. Migration: `git-evidence = { version = "…", default-features = false, features = ["bundled-sqlite"] }` keeps the build as it was.
+- **`testing::Scratch::landing(n)` says it counts from 0.**
+
 ## [0.2.0] - 2026-11-14
 
 ### Added

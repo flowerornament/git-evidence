@@ -207,7 +207,8 @@ impl Scratch {
         Evidence::open(self.git.git_dir()).trunk("refs/heads/master")
     }
 
-    /// The `n`th landing, oldest first.
+    /// A landing by its position on `master`, counting from 0: `landing(0)` is
+    /// the oldest, and after `landings(3)` the newest is `landing(2)`.
     ///
     /// # Panics
     /// If there are not `n + 1` landings: a mistake in the test.

@@ -377,7 +377,9 @@ match evidence.at(|at| at.trend(&query)) {
 - Every answer and every report implements `TidyRows`: `value.header()` and `value.rows()` are what the command line prints.
 - `evidence.sql(query)` returns `Rows`, the rows of one read-only query (SQL, above).
 - `git_evidence::testing::Scratch` (feature `testing`) gives an integration's tests a throwaway repository, as these examples use.
-- The `cli` feature, on by default, builds the `git-evidence` binary and its dependencies (clap and the manual-page generator); a library leaves it out with `default-features = false`, or `cargo add git-evidence --no-default-features`.
+- The `cli` feature, on by default, builds the `git-evidence` binary and its dependencies (clap and the manual-page generator).
+- The `bundled-sqlite` feature, on by default, compiles SQLite from source into the crate. Without it, the index links the system's libsqlite3, 3.38 or later, found by pkg-config; an older one refuses every question that needs the index, naming the feature.
+- A library leaves both out with `default-features = false` (`cargo add git-evidence --no-default-features`), and adds `features = ["bundled-sqlite"]` unless the host has libsqlite3.
 
 ## Benchmark
 
@@ -448,7 +450,7 @@ The version is 0.x. The event lines (`v: 2`) and the notes layout are permanent:
 
 ## Dependencies
 
-Git, through its command line only; every call goes through one hardened boundary. The library: `rusqlite` with bundled SQLite, `serde`, `serde_json`, `sha2`, `thiserror` and `tempfile` (atomic writes of the index and the store). The `cli` feature, on by default, adds `clap`, with `clap_mangen` and `roff` to render the manual; a library caller turns it off with `default-features = false`.
+Git, through its command line only; every call goes through one hardened boundary. The library: `rusqlite`, with SQLite bundled unless the `bundled-sqlite` feature is off, `serde`, `serde_json`, `sha2`, `thiserror` and `tempfile` (atomic writes of the index and the store). The `cli` feature, on by default, adds `clap`, with `clap_mangen` and `roff` to render the manual; a library caller turns it off with `default-features = false`, which also turns off `bundled-sqlite`.
 
 ## License
 

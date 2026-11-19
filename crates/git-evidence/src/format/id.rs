@@ -277,7 +277,7 @@ impl RunId {
             now.as_nanos(),
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        Self::ulid(now.as_millis(), seed.as_bytes())
+        Self::derived(now.as_millis(), seed.as_bytes())
     }
 
     /// The id of an imported record: a ULID whose time is the record's own and
@@ -287,13 +287,22 @@ impl RunId {
     /// the same run however many times, and through however many stores, it arrives.
     #[must_use]
     pub fn derived(recorded_millis: u128, source: &[u8]) -> Self {
-        Self::ulid(recorded_millis, source)
+        let digest = Sha256::of(source);
+        let hex = &digest.as_str()["sha256:".len()..];
+        Self::from_parts(
+            recorded_millis,
+            u128::from_str_radix(&hex[..20], 16).unwrap_or(0),
+        )
     }
 
-    fn ulid(millis: u128, entropy_source: &[u8]) -> Self {
-        let entropy = Sha256::of(entropy_source);
-        let hex = &entropy.as_str()["sha256:".len()..];
-        let random = u128::from_str_radix(&hex[..20], 16).unwrap_or(0);
+    /// The ULID of `millis` since the Unix epoch and `random`, for a producer
+    /// whose runs already carry a time and unique bits, such as another tool's
+    /// run id: the same parts always give the same id, with no hashing. As in a
+    /// ULID, only the low 48 bits of `millis` and the low 80 bits of `random`
+    /// are kept. Uniqueness is the caller's: two runs given the same parts
+    /// share one id.
+    #[must_use]
+    pub fn from_parts(millis: u128, random: u128) -> Self {
         let value = ((millis & ((1 << 48) - 1)) << 80) | (random & ((1 << 80) - 1));
         let mut text = String::with_capacity(26);
         for index in 0..26 {
@@ -355,6 +364,36 @@ mod tests {
         assert!(
             derived < RunId::derived(1_776_420_997_000, b"row"),
             "time comes first"
+        );
+    }
+
+    #[test]
+    fn a_run_id_from_parts_is_the_ulid_of_its_time_and_random_bits() {
+        // The ULID specification's example: its time part is 1469918176385.
+        let id = RunId::from_parts(1_469_918_176_385, 0);
+        assert!(id.as_str().starts_with("01ARYZ6S41"), "{id}");
+        assert_eq!(RunId::parse(id.as_str()), Ok(id.clone()));
+        assert_eq!(
+            RunId::from_parts(0, 0).as_str(),
+            "00000000000000000000000000"
+        );
+        assert_eq!(
+            RunId::from_parts((1 << 48) - 1, (1 << 80) - 1).as_str(),
+            "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"
+        );
+        assert_eq!(
+            RunId::from_parts((1 << 48) | 5, (1 << 80) | 7),
+            RunId::from_parts(5, 7),
+            "only the low 48 and 80 bits are kept"
+        );
+    }
+
+    #[test]
+    fn a_derived_run_id_keeps_its_value() {
+        // Ids already recorded by importers must not move when the encoder does.
+        assert_eq!(
+            RunId::derived(1_776_420_996_000, b"row").as_str(),
+            "01KPDF2GX0CD3PHPQ18X2GDS5Z"
         );
     }
 

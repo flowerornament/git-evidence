@@ -24,6 +24,11 @@ pub const TIME_LIMIT: std::time::Duration = std::time::Duration::from_secs(30);
 /// committing, when no reader holds it.
 const WAL_TRUNCATE_BYTES: u64 = 64 << 20;
 
+/// The oldest SQLite the index runs on, as SQLite numbers its versions
+/// (3.38.0): the views and queries use the JSON functions, built in from 3.38,
+/// and named windows. Only a build without `bundled-sqlite` can link an older one.
+const SQLITE_MINIMUM: i32 = 3_038_000;
+
 /// An index failure.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
@@ -41,6 +46,11 @@ pub enum IndexError {
     TimeLimit { limit: std::time::Duration },
     #[error("cannot start the read's time limit: {0}")]
     Watch(#[source] std::io::Error),
+    /// The SQLite this build links is older than the index needs.
+    #[error(
+        "the index needs SQLite 3.38 or later, and this build links {found}; build git-evidence with its `bundled-sqlite` feature, or link a newer libsqlite3"
+    )]
+    OldSqlite { found: String },
     #[error("cannot create {path}: {source}")]
     Io {
         path: PathBuf,
@@ -88,6 +98,11 @@ impl<Trunk> Index<Trunk> {
     /// # Errors
     /// Refuses when the database cannot be created or its schema is unusable.
     fn open_scoped(store: Store, trunk_ref: Trunk) -> Result<Self, IndexError> {
+        if rusqlite::version_number() < SQLITE_MINIMUM {
+            return Err(IndexError::OldSqlite {
+                found: rusqlite::version().to_owned(),
+            });
+        }
         let dir = store.state_dir();
         std::fs::create_dir_all(&dir).map_err(|source| IndexError::Io {
             path: dir.clone(),
@@ -458,11 +473,21 @@ mod tests {
     //! its answers, never reaches an answer; a read past its limit is
     //! stopped; a writer's catch-up pins the notes it folded.
 
-    use super::{Cached, Index, IndexError, pin_in};
+    use super::{Cached, Index, IndexError, SQLITE_MINIMUM, pin_in};
     use crate::index::fixtures::{TRUNK, another_build_prepares, index, record_a_run};
     use crate::testing::{HANG_GUARD, Scratch};
     use rusqlite::Connection;
     use std::time::Duration;
+
+    #[test]
+    fn the_linked_sqlite_is_one_the_index_runs_on() {
+        // Bundled, or the system's in the gate's build without bundled-sqlite.
+        assert!(
+            rusqlite::version_number() >= SQLITE_MINIMUM,
+            "{}",
+            rusqlite::version()
+        );
+    }
 
     /// A query that runs for hours: counting to ten billion, one row at a time.
     const SLOW: &str = "WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c \

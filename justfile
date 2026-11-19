@@ -2,13 +2,15 @@
 #
 # The gate: fmt, strict clippy (also on the libraries as a caller with
 # `default-features = false` builds them, with and without `testing`), every
-# test and doc test, API docs, both crates packaged
+# test and doc test, git-evidence's tests again on the system SQLite (without
+# `bundled-sqlite`), API docs, both crates packaged
 check: && package
     cargo fmt --all --check
     cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
     cargo clippy --workspace --lib --no-default-features --locked -- -D warnings
     cargo clippy -p git-evidence --lib --no-default-features --features testing --locked -- -D warnings
     cargo test --workspace --all-features --locked
+    cargo test -p git-evidence --no-default-features --features cli,testing,fault-injection --locked
     RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features --locked
 
 # git-evidence's copy resolves against the packaged git-process. The check is
