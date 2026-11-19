@@ -4,6 +4,8 @@ All notable changes to `git-evidence` are recorded here. The format follows [Kee
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-19
+
 ### Added
 
 - **`RunId::from_parts(millis, random)`**, the ULID of a time and 80 random bits, with no hashing, for a producer whose runs already carry unique bits (another tool's run id). `RunId::derived` is `from_parts` of the hashed source, and its ids are unchanged.

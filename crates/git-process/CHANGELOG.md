@@ -4,6 +4,10 @@ All notable changes to `git-process` are recorded here. The format follows [Keep
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-19
+
+Released with git-evidence 0.3.0; no changes.
+
 ## [0.2.0] - 2026-11-14
 
 ### Added
