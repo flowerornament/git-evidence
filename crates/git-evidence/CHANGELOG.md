@@ -4,6 +4,18 @@ All notable changes to `git-evidence` are recorded here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- **`trend --kind GLOB` and `--variant PREFIX`**, and `TrendQuery::kind` and `TrendQuery::variant`: only the runs of matching kinds, or of the one variant whose digest starts with PREFIX.
+
+### Changed
+
+- **`trend`'s columns.** The header is now `landing,commit,date,kind,machine,variant,value,unit,run`. Migration: a script that reads `trend --csv` by position takes `value` from the 7th column instead of the 5th, `unit` from the 8th and `run` from the 9th.
+
+### Fixed
+
+- **`trend` no longer shows two variants as one series.** Each row names its run's `kind` and `variant` (the first 8 characters of the digest, as `diff` prints it), so values recorded under other parameters, another harness or another machine stay apart. `Point` gains `kind`, `variant` and `short_variant()`.
+
 ## [0.3.0] - 2026-11-19
 
 ### Added

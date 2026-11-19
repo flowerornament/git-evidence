@@ -38,3 +38,11 @@ pub(crate) use show::show;
 pub use show::{KeyOutcome, Param, RunDetail, ShowQuery, Shown, ShownOutcome};
 pub(crate) use trend::trend;
 pub use trend::{Point, TrendQuery};
+
+/// A variant's first 8 digest characters: enough to tell two series of one
+/// key apart in a row; `show RUN` prints a run's parameters.
+pub(crate) fn short_variant(variant: &crate::format::id::Sha256) -> &str {
+    let variant = variant.as_str();
+    let digest = variant.split_once(':').map_or(variant, |(_, d)| d);
+    digest.get(..8).unwrap_or(digest)
+}

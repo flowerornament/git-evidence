@@ -129,9 +129,7 @@ impl Difference {
     /// one key apart; `show RUN` prints a run's parameters.
     #[must_use]
     pub fn short_variant(&self) -> &str {
-        let variant = self.variant.as_str();
-        let digest = variant.split_once(':').map_or(variant, |(_, d)| d);
-        digest.get(..8).unwrap_or(digest)
+        super::short_variant(&self.variant)
     }
 
     /// The change from `before` to `after`; `None` unless both sides hold a

@@ -18,9 +18,9 @@ From the crate's [quick start](crates/git-evidence/README.md#quick-start), two r
 
 ```console
 $ git evidence trend latency.p99_ns parse_large
-landing  commit        date                  machine  value  unit  run
-      0  2f263a8ba34b  2026-10-08T03:00:00Z  laptop   88634  ns    01JA8Z3K4M0000000000000000
-      1  11730712b4f6  2026-10-08T03:00:00Z  laptop   80412  ns    01JA8Z3K4M0000000000000001
+landing  commit        date                  kind  machine  variant   value  unit  run
+      0  2f263a8ba34b  2026-10-08T03:00:00Z  perf  laptop   ecd56f15  88634  ns    01JA8Z3K4M0000000000000000
+      1  11730712b4f6  2026-10-08T03:00:00Z  perf  laptop   ecd56f15  80412  ns    01JA8Z3K4M0000000000000001
 $ git evidence diff HEAD~1 HEAD
 kind  machine  variant   key          metric          before  after  change  unit  before_runs  after_runs  before_run                  after_run
 perf  laptop   ecd56f15  parse_large  latency.p99_ns   88634  80412   -9.3%  ns              1           1  01JA8Z3K4M0000000000000000  01JA8Z3K4M0000000000000001

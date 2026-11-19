@@ -51,7 +51,7 @@ fn a_child_started_by_scratch_reads_the_scratch_store_and_nothing_else() {
     let text = String::from_utf8_lossy(&output.stdout);
     let rows: Vec<Vec<&str>> = text.lines().map(|l| l.split(',').collect()).collect();
     assert_eq!(rows.len(), 2, "a header and one row: {text}");
-    assert_eq!((rows[0][4], rows[1][4]), ("value", "5"), "{text}");
+    assert_eq!((rows[0][6], rows[1][6]), ("value", "5"), "{text}");
     assert!(Measure::new(MetricName::parse("x").expect("m"), f64::NAN).is_err());
 }
 

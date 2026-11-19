@@ -68,9 +68,9 @@ $ git evidence log HEAD
 landing  run                         kind  producer     machine  opened                    ended     measured  verdict  refused  skipped
       1  01JA8Z3K4M0000000000000001  perf  bench-suite  laptop   2026-10-09T03:10:02.123Z  complete         1        0        1        0
 $ git evidence trend latency.p99_ns parse_large
-landing  commit        date                  machine  value  unit  run
-      0  2f263a8ba34b  2026-10-08T03:00:00Z  laptop   88634  ns    01JA8Z3K4M0000000000000000
-      1  11730712b4f6  2026-10-08T03:00:00Z  laptop   80412  ns    01JA8Z3K4M0000000000000001
+landing  commit        date                  kind  machine  variant   value  unit  run
+      0  2f263a8ba34b  2026-10-08T03:00:00Z  perf  laptop   ecd56f15  88634  ns    01JA8Z3K4M0000000000000000
+      1  11730712b4f6  2026-10-08T03:00:00Z  perf  laptop   ecd56f15  80412  ns    01JA8Z3K4M0000000000000001
 $ git evidence diff HEAD~1 HEAD
 kind  machine  variant   key          metric          before  after  change  unit  before_runs  after_runs  before_run                  after_run
 perf  laptop   ecd56f15  parse_large  latency.p99_ns   88634  80412   -9.3%  ns              1           1  01JA8Z3K4M0000000000000000  01JA8Z3K4M0000000000000001
@@ -98,7 +98,7 @@ git evidence [--last N]                            the newest landings (default 
 git evidence show REV|RUN [--kind G] [--machine G] [--key G] [--metric G]
                                                    one row per number or outcome on a revision, or in one run
 git evidence log REV | A..B | SELECT               one row per run on REV's tree, or on each selected landing
-git evidence trend METRIC KEY [A..B] [SELECT] [--machine G]
+git evidence trend METRIC KEY [A..B] [SELECT] [--kind G] [--machine G] [--variant PREFIX]
                                                    one row per run's value over the landings (default --last 30)
 git evidence diff A B [--kind G] [--key G] [--metric G] [--machine G]
                                                    the numbers that differ between two revisions
@@ -110,7 +110,7 @@ git evidence sql QUERY | --path                    one read-only SQL query (SQL,
 
 - **`show`** prints, for every run on the revision's tree, one row per recorded number, and one row per key that recorded no number: its `metric` is the outcome (`verdict`, `refused`, `skipped`) and its `value` the verdict's status (`pass`, `fail`, `timeout`) or the reason. Given a run id instead, it prints that run, its parameters first (`metric` is `param.NAME`) and its close conditions, one row per value (`metric` is `condition.PATH`, as `condition.load`).
 - **`log`** prints one row per run: how it ended (`complete`, `refused: REASON`, empty while open) and how many keys each outcome has.
-- **`trend`** prints one row per ended run that recorded the metric for the key, oldest landing first. Several runs on one landing are several rows, in the order they opened.
+- **`trend`** prints one row per ended run that recorded the metric for the key, oldest landing first. Several runs on one landing are several rows, in the order they opened. Each row names its run's kind and `variant`, as `diff` does, so values from another instrument or other parameters never read as one series; `--variant PREFIX` keeps the runs of the variant whose digest starts with PREFIX (the 8 characters a row prints).
 - **`diff`** matches the numbers of two revisions on kind, machine, variant, key, metric and unit, and prints those that differ. `variant` is the first 8 characters of the series' digest, so two series of one key never look alike (`show RUN` prints a run's parameters). Where a revision has several complete runs of one series, the newest gives the number: `before_runs` and `after_runs` count them and `before_run` and `after_run` name the one taken, so a choice is never silent. A number on one side only, or in another unit, keeps the other side empty; units are never converted. `change` is a percentage of `before`, or the plain difference where `before` is 0 or the unit is already a ratio (`1`) or a percentage (`%`).
 
 ## Output
@@ -122,7 +122,7 @@ Every verb prints rows: a header line, then one line per fact. At a terminal the
 | `git evidence` (no verb) | `landing,commit,date,KIND…,KIND_refused…,subject`                                 |
 | `show`                   | `kind,machine,key,metric,value,unit,run`                                          |
 | `log`                    | `landing,run,kind,producer,machine,opened,ended,measured,verdict,refused,skipped` |
-| `trend`                  | `landing,commit,date,machine,value,unit,run`                                      |
+| `trend`                  | `landing,commit,date,kind,machine,variant,value,unit,run`                         |
 | `diff`                   | `kind,machine,variant,key,metric,before,after,change,unit,before_runs,after_runs,before_run,after_run` |
 | `keys`                   | `kind,key,runs,metric,unit,direction`                                             |
 | `record`                 | `run,written,already_present,run_bytes`                                           |

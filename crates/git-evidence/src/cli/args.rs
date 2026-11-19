@@ -40,9 +40,15 @@ pub enum Verb {
         metric: MetricName,
         /// The key, e.g. parser/parse_large.
         key: Key,
+        /// Only runs whose kind matches this glob.
+        #[arg(long, value_name = "GLOB")]
+        kind: Option<String>,
         /// Only runs whose machine matches this glob.
         #[arg(long, value_name = "GLOB")]
         machine: Option<String>,
+        /// Only the variant whose digest starts with this (the 8 characters a row prints).
+        #[arg(long, value_name = "PREFIX", value_parser = variant_prefix)]
+        variant: Option<String>,
         /// A..B: the landings after A, through B. Without any selection: --last 30.
         range: Option<String>,
         #[command(flatten)]
@@ -192,4 +198,14 @@ pub struct SelectorArgs {
     /// Only landings committed on or before DATE (a whole day, or to the second).
     #[arg(long, value_name = "DATE")]
     pub until: Option<UtcDate>,
+}
+
+/// `--variant`: the start of a variant's digest, 1 to 64 hexadecimal digits in
+/// either case, as lowercase.
+fn variant_prefix(text: &str) -> Result<String, String> {
+    if (1..=64).contains(&text.len()) && text.bytes().all(|b| b.is_ascii_hexdigit()) {
+        Ok(text.to_ascii_lowercase())
+    } else {
+        Err("a variant is 1 to 64 hexadecimal digits, as a row prints it (8)".to_owned())
+    }
 }

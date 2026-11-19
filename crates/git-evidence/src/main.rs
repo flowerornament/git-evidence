@@ -24,8 +24,8 @@ use clap::Parser as _;
 use cli::args::{Cli, Verb};
 use cli::revision::{resolve_range, resolve_tree};
 use git_evidence::{
-    DiffQuery, End, Error, EventLine, Evidence, Key, KeysQuery, Kind, LogQuery, MetricName, Reason,
-    RecordError, RemoteError, RunId, Selector, ShowQuery, Shown, TidyRows, TrendQuery,
+    DiffQuery, End, Error, EventLine, Evidence, KeysQuery, Kind, LogQuery, Reason, RecordError,
+    RemoteError, RunId, Selector, ShowQuery, Shown, TidyRows, TrendQuery,
 };
 use std::io::{Read as _, Write as _};
 use std::num::NonZeroU32;
@@ -155,12 +155,20 @@ fn ask(output: Output, evidence: &Evidence, verb: Verb) -> Result<u8, Box<dyn st
         Verb::Trend {
             metric,
             key,
+            kind,
             machine,
+            variant,
             range,
             landings,
         } => {
-            let landings = selector(evidence, range.as_deref(), &landings)?;
-            trend(output, evidence, metric, key, machine, landings)
+            let mut landings = selector(evidence, range.as_deref(), &landings)?;
+            if landings.is_everything() {
+                landings.last = Some(TrendQuery::DEFAULT_LAST);
+            }
+            let mut query = TrendQuery::new(metric, key);
+            (query.kind, query.machine, query.variant, query.landings) =
+                (kind, machine, variant, landings);
+            Ok(emit(output, &evidence.at(|at| at.trend(&query))?))
         }
         Verb::Log { rev, landings } => log(output, evidence, rev, &landings),
         Verb::Show {
@@ -204,24 +212,6 @@ fn ask(output: Output, evidence: &Evidence, verb: Verb) -> Result<u8, Box<dyn st
             unreachable!("answered by run")
         }
     }
-}
-
-/// `trend`: one key's metric over the selected landings, the newest
-/// [`TrendQuery::DEFAULT_LAST`] when nothing narrows them.
-fn trend(
-    output: Output,
-    evidence: &Evidence,
-    metric: MetricName,
-    key: Key,
-    machine: Option<String>,
-    mut landings: Selector,
-) -> Result<u8, Box<dyn std::error::Error>> {
-    if landings.is_everything() {
-        landings.last = Some(TrendQuery::DEFAULT_LAST);
-    }
-    let mut query = TrendQuery::new(metric, key);
-    (query.machine, query.landings) = (machine, landings);
-    Ok(emit(output, &evidence.at(|at| at.trend(&query))?))
 }
 
 /// `show RUN` prints the run with its parameters; `show REV` every run's
