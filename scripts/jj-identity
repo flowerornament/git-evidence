@@ -9,7 +9,8 @@
 # `Jj-Workspace:`, `Agent:` and `Session:` trailers naming the session that
 # FIRST described the change. Each key is added only when the description
 # lacks it, so a later re-describe never adds a second line. The trailers join
-# commits to the session transcripts.
+# commits to the session transcripts. In Claude Code it also sets
+# BEADS_ACTOR to the workspace name for the rest of the session (below).
 #
 # The session id is the top-level `session_id` of the hook's JSON payload on
 # stdin. An absent or malformed id leaves `Session:` out rather than borrowing
@@ -78,6 +79,15 @@ if [ -n "${JJ_IDENTITY_DRY_RUN:-}" ]; then
 fi
 jj config set --workspace templates.commit_trailers "'$template'" >/dev/null 2>&1 \
     || echo "jj-identity: could not set jj commit trailers for $workspace" >&2
+
+# bd records the seat as the actor of every goal and comment. Claude Code
+# hands a SessionStart hook a file of variables for the session's later
+# commands; codex has none, so a codex session sets BEADS_ACTOR itself.
+if [ -n "${CLAUDE_ENV_FILE:-}" ] \
+    && ! grep -qxF "export BEADS_ACTOR=$workspace" "$CLAUDE_ENV_FILE" 2>/dev/null; then
+    printf 'export BEADS_ACTOR=%s\n' "$workspace" >> "$CLAUDE_ENV_FILE" \
+        || echo "jj-identity: could not set BEADS_ACTOR for $workspace" >&2
+fi
 
 # Name the tmux pane and its hail label after the jj workspace, so other
 # agents can address this session by workspace name. The pane is the one

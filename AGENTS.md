@@ -12,6 +12,12 @@ bd holds **goals**, not tasks. These rules override bd's generic guidance, inclu
 - **Appetite spent, goal not done:** land what holds, narrow the goal within its why, or park it with a finding. Never extend it silently.
 - **Every landing** (a change published to the main branch) cites a goal in its subject: `area: subject (<goal-id>)`.
 - **One owner per goal**, claimed atomically. One goal in progress per agent.
+- **The actor is the seat.** The SessionStart hook sets `BEADS_ACTOR` to the jj workspace name in Claude Code; in another harness, set it yourself before the first bd command.
+- **What waits on the maintainer** carries the label `human`: add it when you hand a goal over, and remove it when they answer (`bd label remove <id> human`). `bd human list` is their whole queue. Never `bd human respond` or `bd human dismiss` a goal: both close it.
+- **A maintainer's decision** is a `decision` bead, closed, holding their words and the date. The goal or document it settles cites it.
+- **A review** is a comment on the goal: GO or NO-GO first, then the commit reviewed and what the reviewer ran and did not run.
+- **A request from a user of the crates** becomes a goal stated as their need, never as the caller's code.
+- **A report** names every change outside the goal's brief and every gate or test not run. Only results actually run are reported as passing.
 - **Memory:** do not keep it in bd (`bd remember`) or in ad hoc files. Put durable facts in the code, the living documents or a dated design document.
 
 ```bash
@@ -27,6 +33,10 @@ bd close <id>                 # done-when holds
 # write a goal (why and appetite in the description)
 bd create --title="..." --type=feature|bug --priority=2 \
   --acceptance "Done when: <a check that can fail>"
+
+# the maintainer
+bd human list                 # what waits on them
+bd list --type decision --status closed   # what they decided
 
 # query
 bd query "status=in_progress"
@@ -94,6 +104,7 @@ git-evidence-<n>b/   seat, implementer
 - Review a frozen commit in one visit, by commit id: `jj new <commit-id>`; when done, `jj abandon @` and `jj new main`. Each move of `@` costs a rebuild.
 - When another agent rewrites a commit under your `@`, your `@` is stale: every jj command refuses until you run `jj workspace update-stale`.
 - Never `jj edit` a change that is an ancestor of another seat's `@`.
+- Before amending, reverting or building on a change, `peat <commit-or-change-id>` shows the session that made it and what was said there; `peat <goal-id>`, `peat <path>` and `peat <words>` search the same record. The record is local, in the anchor's ignored `.peat/`.
 - To recover, start with `jj op log`, `jj undo` and `jj op restore`. Use them before any destructive file operation. The `jj-ops` skill holds the jj model.
 
 ## Completion
